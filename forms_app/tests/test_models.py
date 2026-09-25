@@ -1,0 +1,58 @@
+import pytest
+from django.db import IntegrityError, transaction
+
+from accounts.models import Account
+from forms_app.models import Form, Submission
+
+pytestmark = pytest.mark.django_db
+
+
+def _make_form(**kwargs):
+    account = kwargs.pop("account", None) or Account.objects.create(name="Acme Inc")
+    return Form.objects.create(account=account, name="Contact form", **kwargs)
+
+
+def test_token_is_auto_generated_and_non_empty():
+    form = _make_form()
+
+    assert form.token
+    assert len(form.token) > 10
+
+
+def test_token_is_unique_across_forms():
+    account = Account.objects.create(name="Acme Inc")
+    form_a = _make_form(account=account)
+    form_b = _make_form(account=account)
+
+    assert form_a.token != form_b.token
+
+
+def test_duplicate_token_raises_integrity_error():
+    account = Account.objects.create(name="Acme Inc")
+    form = _make_form(account=account)
+
+    with pytest.raises(IntegrityError):
+        with transaction.atomic():
+            Form.objects.create(account=account, name="Other form", token=form.token)
+
+
+def test_spam_action_defaults_to_flag():
+    form = _make_form()
+
+    assert form.spam_action == Form.SpamAction.FLAG
+
+
+def test_deleting_account_cascades_to_forms_and_submissions():
+    account = Account.objects.create(name="Acme Inc")
+    form = _make_form(account=account)
+    submission = Submission.objects.create(
+        form=form,
+        payload={"name": "Jane"},
+        status=Submission.Status.HAM,
+        source_ip_hash="a" * 64,
+    )
+
+    account.delete()
+
+    assert not Form.objects.filter(pk=form.pk).exists()
+    assert not Submission.objects.filter(pk=submission.pk).exists()
