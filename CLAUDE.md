@@ -73,9 +73,15 @@ docker compose run --rm web python manage.py makemigrations / migrate
   full suite and ruff before declaring a task complete.
 - **Dependencies:** state why before adding any new package.
 - **Migrations:** never edit an applied migration; create a new one.
-- **Commits:** small, conventional (`feat(ingest): ...`), reference FR IDs.
+- **Git: do not run git commands that change state** (no add, commit, push,
+  checkout, reset, stash). The user commits manually in a separate terminal.
+  Read-only commands (git status, git diff, git log) are fine.
+- **At the end of each task**, propose one or more conventional commit messages
+  (e.g. `feat(ingest): accept JSON and form-encoded POSTs (FR-3.1)`) and list
+  which files belong in each commit.
 - **End every task with a summary:** files changed, FRs covered, how to verify
-  manually, test results, deviations from the SRS, follow-ups.
+  manually, test results, deviations from the SRS, follow-ups, suggested
+  commit message(s).
 
 ## Progress
 - [ ] Day 1 — Compose skeleton, settings, custom user stub, healthz, tooling

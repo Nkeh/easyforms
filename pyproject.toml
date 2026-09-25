@@ -1,0 +1,33 @@
+[project]
+name = "easyforms"
+version = "0.1.0"
+description = "Hosted form backend with ML spam filtering"
+requires-python = ">=3.12"
+dependencies = [
+    "django>=5.2,<5.3",
+    "psycopg[binary]>=3.2",
+    "django-environ>=0.11",
+    "django-rq>=3.0",
+    "redis>=5.0",
+    "gunicorn>=23.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-django>=4.9",
+    "ruff>=0.6",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["migrations"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.local"
+python_files = ["test_*.py", "tests.py"]
+addopts = "-q"
