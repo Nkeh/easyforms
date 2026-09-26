@@ -1,6 +1,7 @@
 import pytest
 from django.contrib.auth.tokens import default_token_generator
 from django.core import mail
+from django.test import Client
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 
@@ -55,3 +56,43 @@ def test_reset_confirm_round_trip_sets_new_password(client):
     assert response.status_code == 302
     assert response.url == "/reset/complete"
     assert client.login(username="owner@example.com", password="brand-new-pass-456")
+
+
+def test_reset_request_is_rate_limited_by_ip(settings):
+    settings.AUTH_RATE_LIMIT_RESET_IP_PER_HOUR = 2
+    settings.AUTH_RATE_LIMIT_RESET_EMAIL_PER_HOUR = 1000
+
+    Client().post("/reset", {"email": "a@example.com"})
+    Client().post("/reset", {"email": "b@example.com"})
+    response = Client().post("/reset", {"email": "c@example.com"})
+
+    assert response.status_code == 429
+    assert int(response["Retry-After"]) > 0
+
+
+def test_reset_request_is_rate_limited_by_email(client, settings):
+    settings.AUTH_RATE_LIMIT_RESET_IP_PER_HOUR = 1000
+    settings.AUTH_RATE_LIMIT_RESET_EMAIL_PER_HOUR = 2
+
+    client.post("/reset", {"email": "owner@example.com"})
+    client.post("/reset", {"email": "owner@example.com"})
+    response = client.post("/reset", {"email": "owner@example.com"})
+
+    assert response.status_code == 429
+
+
+def test_reset_rate_limit_response_identical_for_known_and_unknown_email(settings):
+    settings.AUTH_RATE_LIMIT_RESET_IP_PER_HOUR = 1000
+    settings.AUTH_RATE_LIMIT_RESET_EMAIL_PER_HOUR = 1
+    User.objects.create_user(email="owner@example.com", password="s3cret-pass123")
+
+    known_client = Client()
+    known_client.post("/reset", {"email": "owner@example.com"})
+    known_response = known_client.post("/reset", {"email": "owner@example.com"})
+
+    unknown_client = Client()
+    unknown_client.post("/reset", {"email": "nobody@example.com"})
+    unknown_response = unknown_client.post("/reset", {"email": "nobody@example.com"})
+
+    assert known_response.status_code == unknown_response.status_code == 429
+    assert known_response.content == unknown_response.content

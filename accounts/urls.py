@@ -10,7 +10,7 @@ urlpatterns = [
     path("signup", views.signup, name="signup"),
     path(
         "login",
-        auth_views.LoginView.as_view(
+        views.RateLimitedLoginView.as_view(
             template_name="accounts/login.html",
             authentication_form=EmailAuthenticationForm,
         ),
@@ -22,7 +22,7 @@ urlpatterns = [
     path("settings", views.settings_view, name="settings"),
     path(
         "reset",
-        auth_views.PasswordResetView.as_view(
+        views.RateLimitedPasswordResetView.as_view(
             form_class=TransactionalPasswordResetForm,
             subject_template_name="notifications/email/password_reset_subject.txt",
             template_name="accounts/password_reset_form.html",

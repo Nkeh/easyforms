@@ -1,8 +1,10 @@
 import pytest
 from django.core import mail
 from django.db import IntegrityError
+from django.test import Client
 
 from accounts.models import Account, User
+from forms_app.models import Form
 
 pytestmark = pytest.mark.django_db
 
@@ -133,3 +135,60 @@ def test_settings_shows_email_verified_and_plan(client):
     content = response.content.decode()
     assert "owner@example.com" in content
     assert "free" in content
+
+
+def test_settings_shows_forms_and_submissions_usage(client):
+    user = User.objects.create_user(email="owner@example.com", password="s3cret-pass123")
+    Form.objects.create(account=user.account, name="My form")
+    client.login(username="owner@example.com", password="s3cret-pass123")
+
+    response = client.get("/settings")
+    content = response.content.decode()
+
+    assert "1 / 3" in content
+    assert "0 / 250" in content
+
+
+def test_login_is_rate_limited_by_ip(client, settings):
+    settings.AUTH_RATE_LIMIT_LOGIN_IP_PER_MINUTE = 2
+    settings.AUTH_RATE_LIMIT_LOGIN_EMAIL_PER_MINUTE = 1000
+    User.objects.create_user(email="owner@example.com", password="s3cret-pass123")
+
+    for _ in range(2):
+        response = client.post(
+            "/login", {"username": "owner@example.com", "password": "wrong-password"}
+        )
+        assert response.status_code == 200
+
+    response = client.post(
+        "/login", {"username": "owner@example.com", "password": "wrong-password"}
+    )
+
+    assert response.status_code == 429
+    assert int(response["Retry-After"]) > 0
+
+
+def test_login_is_rate_limited_by_email_case_insensitively(client, settings):
+    settings.AUTH_RATE_LIMIT_LOGIN_IP_PER_MINUTE = 1000
+    settings.AUTH_RATE_LIMIT_LOGIN_EMAIL_PER_MINUTE = 2
+    User.objects.create_user(email="owner@example.com", password="s3cret-pass123")
+
+    client.post("/login", {"username": "Owner@Example.com", "password": "wrong-password"})
+    client.post("/login", {"username": "OWNER@EXAMPLE.COM", "password": "wrong-password"})
+
+    response = client.post(
+        "/login", {"username": "owner@example.com", "password": "wrong-password"}
+    )
+
+    assert response.status_code == 429
+
+
+def test_signup_is_rate_limited_by_ip(settings):
+    settings.AUTH_RATE_LIMIT_SIGNUP_IP_PER_HOUR = 2
+
+    Client().post("/signup", {"email": "a@example.com", "password": "s3cret-pass123"})
+    Client().post("/signup", {"email": "b@example.com", "password": "s3cret-pass123"})
+    response = Client().post("/signup", {"email": "c@example.com", "password": "s3cret-pass123"})
+
+    assert response.status_code == 429
+    assert int(response["Retry-After"]) > 0

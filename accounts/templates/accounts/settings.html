@@ -13,6 +13,11 @@
 
     <dt>Plan</dt>
     <dd>{{ account.plan }}</dd>
+
+    <dt>Active forms</dt>
+    <dd>{{ forms_limit.used }} / {{ forms_limit.limit }}</dd>
+
+    <dt>Submissions this month</dt>
+    <dd>{{ submissions_limit.used }} / {{ submissions_limit.limit }}</dd>
   </dl>
-  <p>Usage figures are coming Day 7.</p>
 {% endblock %}

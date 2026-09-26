@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth import login
+from django.contrib.auth import views as auth_views
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
 from django.db import IntegrityError, transaction
@@ -9,14 +10,30 @@ from django.views.decorators.http import require_POST
 from accounts.emails import send_verification_email
 from accounts.forms import SignupForm
 from accounts.models import User
+from accounts.rate_limit import check_login_limit, check_reset_limit, check_signup_limit
 from accounts.tokens import read_verification_token
+from billing.limits import check_limit
+from core.utils import hash_ip
+from ingest.ip import get_client_ip
 
 RESEND_VERIFICATION_COOLDOWN_SECONDS = 60
+
+
+def _too_many_requests(request, retry_after):
+    response = render(request, "rate_limited.html", status=429)
+    response["Retry-After"] = str(retry_after)
+    return response
 
 
 def signup(request):
     if request.user.is_authenticated:
         return redirect("dashboard:home")
+
+    if request.method == "POST":
+        ip_hash = hash_ip(get_client_ip(request))
+        signup_limit = check_signup_limit(ip_hash)
+        if not signup_limit.allowed:
+            return _too_many_requests(request, signup_limit.retry_after)
 
     form = SignupForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
@@ -74,4 +91,33 @@ def resend_verification(request):
 
 @login_required
 def settings_view(request):
-    return render(request, "accounts/settings.html", {"account": request.user.account})
+    account = request.user.account
+    return render(
+        request,
+        "accounts/settings.html",
+        {
+            "account": account,
+            "forms_limit": check_limit(account, "forms"),
+            "submissions_limit": check_limit(account, "submissions"),
+        },
+    )
+
+
+class RateLimitedLoginView(auth_views.LoginView):
+    def post(self, request, *args, **kwargs):
+        ip_hash = hash_ip(get_client_ip(request))
+        email = (request.POST.get("username") or "").strip().lower()
+        result = check_login_limit(ip_hash, email)
+        if not result.allowed:
+            return _too_many_requests(request, result.retry_after)
+        return super().post(request, *args, **kwargs)
+
+
+class RateLimitedPasswordResetView(auth_views.PasswordResetView):
+    def post(self, request, *args, **kwargs):
+        ip_hash = hash_ip(get_client_ip(request))
+        email = (request.POST.get("email") or "").strip().lower()
+        result = check_reset_limit(ip_hash, email)
+        if not result.allowed:
+            return _too_many_requests(request, result.retry_after)
+        return super().post(request, *args, **kwargs)
