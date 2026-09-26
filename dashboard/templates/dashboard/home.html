@@ -4,5 +4,33 @@
 
 {% block content %}
   <h1>Dashboard</h1>
-  <p>Dashboard coming Day 11.</p>
+
+  {% if forms %}
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Status</th>
+          <th>Endpoint</th>
+          <th>Created</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for form_obj in forms %}
+          <tr>
+            <td><a href="{% url 'forms_app:detail' pk=form_obj.pk %}">{{ form_obj.name }}</a></td>
+            <td>{{ form_obj.is_active|yesno:"Active,Inactive" }}</td>
+            <td><code>{{ form_obj.endpoint_url }}</code></td>
+            <td>{{ form_obj.created_at|date:"Y-m-d" }}</td>
+            <td><a href="{% url 'forms_app:detail' pk=form_obj.pk %}">Manage</a></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p><a href="{% url 'forms_app:create' %}">+ New form</a></p>
+  {% else %}
+    <p>You haven't created any forms yet.</p>
+    <p><a href="{% url 'forms_app:create' %}">Create your first form</a></p>
+  {% endif %}
 {% endblock %}

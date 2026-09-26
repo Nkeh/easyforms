@@ -1,5 +1,6 @@
 import pytest
 from django.db import IntegrityError, transaction
+from django.test import override_settings
 
 from accounts.models import Account
 from forms_app.models import Form, Submission
@@ -40,6 +41,13 @@ def test_spam_action_defaults_to_flag():
     form = _make_form()
 
     assert form.spam_action == Form.SpamAction.FLAG
+
+
+@override_settings(PUBLIC_BASE_URL="http://example.test")
+def test_endpoint_url_is_built_from_public_base_url():
+    form = _make_form()
+
+    assert form.endpoint_url == f"http://example.test/f/{form.token}"
 
 
 def test_deleting_account_cascades_to_forms_and_submissions():

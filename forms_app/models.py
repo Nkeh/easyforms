@@ -1,6 +1,7 @@
 import secrets
 import uuid
 
+from django.conf import settings
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
@@ -36,6 +37,10 @@ class Form(models.Model):
 
     def __str__(self):
         return self.name
+
+    @property
+    def endpoint_url(self) -> str:
+        return f"{settings.PUBLIC_BASE_URL}/f/{self.token}"
 
 
 class Submission(models.Model):

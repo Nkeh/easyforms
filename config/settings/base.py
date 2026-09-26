@@ -72,6 +72,10 @@ LOGOUT_REDIRECT_URL = "accounts:login"
 
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="EasyForms <noreply@easyforms.example>")
 
+# Base URL used to build public endpoint links (e.g. Form.endpoint_url); never
+# derived from the request host so links stay stable regardless of Host header.
+PUBLIC_BASE_URL = env("PUBLIC_BASE_URL", default="http://localhost:8000")
+
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},

@@ -84,6 +84,10 @@ docker compose run --rm web python manage.py makemigrations / migrate
   commit message(s).
 - **Commit suggestions must be ordered so every commit passes tests on its own.**
   Prefer fewer, cohesive commits over splitting one feature across broken states.
+- **Save each day's end-of-task summary** to docs/progress/day-NN.md (include it
+  in the last suggested commit).
+- **Tests must include a GET of the edit page for an existing object** whenever
+  a form edits stored data (catches initial-value rendering bugs).
 
 ## Progress
 - [*] Day 1 — Compose skeleton, settings, custom user stub, healthz, tooling
