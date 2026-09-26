@@ -5,6 +5,8 @@
 {% block content %}
   <h1>Dashboard</h1>
 
+  <p>{{ forms_limit.used }} / {{ forms_limit.limit }} forms used</p>
+
   {% if forms %}
     <table>
       <thead>
@@ -28,9 +30,17 @@
         {% endfor %}
       </tbody>
     </table>
-    <p><a href="{% url 'forms_app:create' %}">+ New form</a></p>
+    {% if forms_limit.allowed %}
+      <p><a href="{% url 'forms_app:create' %}">+ New form</a></p>
+    {% else %}
+      <p>You've reached your plan's limit of {{ forms_limit.limit }} active forms.</p>
+    {% endif %}
   {% else %}
     <p>You haven't created any forms yet.</p>
-    <p><a href="{% url 'forms_app:create' %}">Create your first form</a></p>
+    {% if forms_limit.allowed %}
+      <p><a href="{% url 'forms_app:create' %}">Create your first form</a></p>
+    {% else %}
+      <p>You've reached your plan's limit of {{ forms_limit.limit }} active forms.</p>
+    {% endif %}
   {% endif %}
 {% endblock %}

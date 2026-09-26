@@ -170,3 +170,43 @@ def test_detail_hides_warning_when_allowed_origins_set(client):
     response = client.get(f"/forms/{form.pk}")
 
     assert "Any website can submit to this form" not in response.content.decode()
+
+
+def test_create_blocked_at_active_forms_limit(client):
+    user = _make_user()
+    for _ in range(3):
+        _make_form(user.account)
+    client.force_login(user)
+
+    response = client.post("/forms/new", {"name": "One too many"})
+
+    assert response.status_code == 200
+    assert "limit of 3 active forms" in response.content.decode()
+    assert Form.objects.filter(account=user.account).count() == 3
+
+
+def test_create_succeeds_after_deactivating_one_at_limit(client):
+    user = _make_user()
+    forms = [_make_form(user.account) for _ in range(3)]
+    forms[0].is_active = False
+    forms[0].save(update_fields=["is_active"])
+    client.force_login(user)
+
+    response = client.post("/forms/new", {"name": "Fits now"})
+
+    assert response.status_code == 302
+    assert Form.objects.filter(account=user.account, is_active=True).count() == 3
+
+
+def test_activate_blocked_at_active_forms_limit(client):
+    user = _make_user()
+    for _ in range(3):
+        _make_form(user.account)
+    inactive_form = _make_form(user.account, is_active=False)
+    client.force_login(user)
+
+    response = client.post(f"/forms/{inactive_form.pk}/activate", follow=True)
+
+    inactive_form.refresh_from_db()
+    assert inactive_form.is_active is False
+    assert "limit of 3 active forms" in response.content.decode()

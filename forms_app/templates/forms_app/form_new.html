@@ -6,6 +6,9 @@
   <h1>New form</h1>
   <form method="post" novalidate>
     {% csrf_token %}
+    {% if form.non_field_errors %}
+      <ul>{% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}</ul>
+    {% endif %}
     {% for field in form %}
       <p>
         {{ field.label_tag }}

@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
+from billing.limits import check_limit
 from forms_app.forms import FormCreateForm, FormEditForm
 from forms_app.models import Form
 
@@ -45,11 +46,17 @@ def form_create(request):
     if request.method == "POST":
         create_form = FormCreateForm(request.POST)
         if create_form.is_valid():
-            new_form = create_form.save(commit=False)
-            new_form.account = request.user.account
-            # TODO(Day 7): check_limit(request.user.account, "forms")
-            new_form.save()
-            return redirect("forms_app:detail", pk=new_form.pk)
+            limit_result = check_limit(request.user.account, "forms")
+            if not limit_result.allowed:
+                create_form.add_error(
+                    None,
+                    f"You've reached your plan's limit of {limit_result.limit} active forms.",
+                )
+            else:
+                new_form = create_form.save(commit=False)
+                new_form.account = request.user.account
+                new_form.save()
+                return redirect("forms_app:detail", pk=new_form.pk)
     else:
         create_form = FormCreateForm()
 
@@ -95,6 +102,12 @@ def form_deactivate(request, pk):
 @require_POST
 def form_activate(request, pk):
     form_obj = _get_owned_form(request, pk)
+    limit_result = check_limit(request.user.account, "forms")
+    if not limit_result.allowed:
+        messages.error(
+            request, f"You've reached your plan's limit of {limit_result.limit} active forms."
+        )
+        return redirect("forms_app:detail", pk=form_obj.pk)
     form_obj.is_active = True
     form_obj.save(update_fields=["is_active", "updated_at"])
     messages.success(request, "Form activated.")
