@@ -1,10 +1,13 @@
 import json
 import logging
+import uuid
 
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 
 from accounts.models import Account
+from billing.models import UsageEvent
+from billing.plans import DEFAULT_PLAN, PLANS
 from core.utils import hash_ip
 from forms_app.models import Form, Submission
 
@@ -538,3 +541,125 @@ def test_method_not_allowed_never_carries_acao(client):
 
     assert response.status_code == 405
     assert "Access-Control-Allow-Origin" not in response
+
+
+# --- Spam scoring: honeypot/heuristics wiring (Day 9, FR-4.1-4.3) ----------
+# Deterministic honeypot spam is used throughout (no model/DB involvement) —
+# these tests are about ham/spam branching in the view, not model thresholds.
+
+
+def test_honeypot_flag_stores_spam_with_signals_and_no_usage_event(client):
+    form = _make_form()  # spam_action defaults to "flag"
+
+    response = client.post(f"/f/{form.token}", {"name": "Jane", "_honeypot": "bot-filled"})
+
+    assert response.status_code == 200
+    submission = Submission.objects.get()
+    assert submission.status == Submission.Status.SPAM
+    assert submission.spam_signals == ["honeypot"]
+    assert submission.spam_score is None
+    assert submission.model_version is None
+    assert response.json()["id"] == str(submission.id)
+    assert UsageEvent.objects.count() == 0
+
+
+def test_honeypot_drop_stores_nothing(client):
+    form = _make_form(spam_action=Form.SpamAction.DROP)
+
+    response = client.post(f"/f/{form.token}", {"name": "Jane", "_honeypot": "bot-filled"})
+
+    assert response.status_code == 200
+    assert Submission.objects.count() == 0
+    assert UsageEvent.objects.count() == 0
+    uuid.UUID(response.json()["id"])  # must still be a syntactically valid id
+
+
+def test_honeypot_drop_response_shape_matches_ham_json(client):
+    ham_form = _make_form()
+    drop_form = _make_form(spam_action=Form.SpamAction.DROP)
+
+    ham_response = client.post(f"/f/{ham_form.token}", {"name": "Jane"})
+    drop_response = client.post(
+        f"/f/{drop_form.token}", {"name": "Jane", "_honeypot": "bot-filled"}
+    )
+
+    assert ham_response.status_code == drop_response.status_code == 200
+    assert set(ham_response.json()) == set(drop_response.json()) == {"ok", "id"}
+    assert ham_response.json()["ok"] is drop_response.json()["ok"] is True
+
+
+def test_honeypot_flag_response_shape_matches_ham_json(client):
+    ham_form = _make_form()
+    flag_form = _make_form()
+
+    ham_response = client.post(f"/f/{ham_form.token}", {"name": "Jane"})
+    flag_response = client.post(
+        f"/f/{flag_form.token}", {"name": "Jane", "_honeypot": "bot-filled"}
+    )
+
+    assert ham_response.status_code == flag_response.status_code == 200
+    assert set(ham_response.json()) == set(flag_response.json()) == {"ok", "id"}
+
+
+def test_honeypot_drop_response_shape_matches_ham_html_mode(client):
+    ham_form = _make_form(allowed_origins=[], redirect_url="https://good.example.com/thanks")
+    drop_form = _make_form(
+        spam_action=Form.SpamAction.DROP,
+        allowed_origins=[],
+        redirect_url="https://good.example.com/thanks",
+    )
+
+    ham_response = client.post(f"/f/{ham_form.token}", {"name": "Jane"}, HTTP_ACCEPT="text/html")
+    drop_response = client.post(
+        f"/f/{drop_form.token}",
+        {"name": "Jane", "_honeypot": "bot-filled"},
+        HTTP_ACCEPT="text/html",
+    )
+
+    assert ham_response.status_code == drop_response.status_code == 303
+    assert (
+        ham_response["Location"] == drop_response["Location"] == "https://good.example.com/thanks"
+    )
+
+
+def test_spam_bypasses_quota_even_when_account_at_limit(client):
+    account = Account.objects.create(name="Acme Inc")
+    form = _make_form(account=account)
+    limit = PLANS[DEFAULT_PLAN]["max_submissions_per_month"]
+    UsageEvent.objects.bulk_create(
+        [UsageEvent(account=account, kind="submission", quantity=1) for _ in range(limit)]
+    )
+
+    response = client.post(f"/f/{form.token}", {"name": "Jane", "_honeypot": "bot-filled"})
+
+    assert response.status_code == 200
+    assert UsageEvent.objects.count() == limit
+    assert Submission.objects.filter(status=Submission.Status.SPAM).count() == 1
+
+
+def test_ham_still_blocked_by_quota_when_account_at_limit(client):
+    account = Account.objects.create(name="Acme Inc")
+    form = _make_form(account=account)
+    limit = PLANS[DEFAULT_PLAN]["max_submissions_per_month"]
+    UsageEvent.objects.bulk_create(
+        [UsageEvent(account=account, kind="submission", quantity=1) for _ in range(limit)]
+    )
+
+    response = client.post(f"/f/{form.token}", {"name": "Jane"})
+
+    assert response.status_code == 429
+    assert response.json()["error"] == "quota_exceeded"
+
+
+def test_spam_log_output_contains_no_payload_values(client, caplog):
+    form = _make_form()
+
+    with caplog.at_level(logging.INFO, logger="ingest"):
+        client.post(
+            f"/f/{form.token}",
+            {"name": "Jane", "message": "TOP-SECRET-SPAM-MARKER", "_honeypot": "bot-filled"},
+        )
+
+    assert "TOP-SECRET-SPAM-MARKER" not in caplog.text
+    assert "verdict=spam" in caplog.text
+    assert "signals=honeypot" in caplog.text

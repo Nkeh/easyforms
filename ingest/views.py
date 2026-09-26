@@ -1,10 +1,12 @@
 import logging
 import time
+import uuid
 
 from django.conf import settings
 from django.db import transaction
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
+from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
 from billing.limits import check_limit
@@ -17,17 +19,41 @@ from ingest.parsing import InvalidPayload, PayloadTooLarge, UnsupportedMediaType
 from ingest.rate_limit import check_ip_limit, check_token_limit
 from ingest.redirects import resolve_redirect_url
 from ingest.responses import error_response, wants_json
+from spam import scoring as spam_scoring
 
 logger = logging.getLogger("ingest")
 
 
-def _log(form, response, start_time):
-    logger.info(
-        "ingest submission form_id=%s status=%s duration_ms=%.1f",
-        form.id if form else None,
-        response.status_code,
-        (time.monotonic() - start_time) * 1000,
-    )
+def _log(form, response, start_time, verdict=None):
+    duration_ms = (time.monotonic() - start_time) * 1000
+    if verdict is None:
+        logger.info(
+            "ingest submission form_id=%s status=%s duration_ms=%.1f",
+            form.id if form else None,
+            response.status_code,
+            duration_ms,
+        )
+    else:
+        logger.info(
+            "ingest submission form_id=%s status=%s duration_ms=%.1f "
+            "verdict=%s signals=%s score_ms=%.1f",
+            form.id if form else None,
+            response.status_code,
+            duration_ms,
+            verdict.status,
+            ",".join(verdict.signals) or "-",
+            verdict.duration_ms,
+        )
+    return response
+
+
+def _build_success_response(request, form, reserved, origin, submission_id):
+    if wants_json(request):
+        response = JsonResponse({"ok": True, "id": str(submission_id)}, status=200)
+    else:
+        response = HttpResponse(status=303)
+        response["Location"] = resolve_redirect_url(form, reserved)
+    apply_cors_headers(response, origin)
     return response
 
 
@@ -100,31 +126,45 @@ def submit(request, token):
         response = error_response(request, "invalid_payload", 422, form=form)
         return _log(form, response, start_time)
 
-    # Day 9 will insert spam scoring here and only meter/limit-check ham
-    # submissions (CLAUDE.md rule 7); every submission is ham until then.
-    submission_limit = check_limit(form.account, "submissions")
-    if not submission_limit.allowed:
-        response = error_response(request, "quota_exceeded", 429, form=form)
-        return _log(form, response, start_time)
+    verdict = spam_scoring.score(fields, reserved, timezone.now())
 
-    with transaction.atomic():
+    if verdict.status == Submission.Status.HAM:
+        submission_limit = check_limit(form.account, "submissions")
+        if not submission_limit.allowed:
+            response = error_response(request, "quota_exceeded", 429, form=form)
+            return _log(form, response, start_time, verdict=verdict)
+
+        with transaction.atomic():
+            submission = Submission.objects.create(
+                form=form,
+                payload=fields,
+                status=Submission.Status.HAM,
+                spam_score=verdict.spam_score,
+                spam_signals=verdict.signals,
+                model_version=verdict.model_version,
+                source_ip_hash=ip_hash,
+            )
+            # check-then-insert can overshoot slightly under concurrency (two
+            # requests both pass check_limit before either commits); accepted.
+            UsageEvent.objects.create(account=form.account, kind="submission", quantity=1)
+
+        response = _build_success_response(request, form, reserved, origin, submission.id)
+        return _log(form, response, start_time, verdict=verdict)
+
+    # Spam: never quota-checked, never metered (CLAUDE.md rule 7).
+    if form.spam_action == Form.SpamAction.FLAG:
         submission = Submission.objects.create(
             form=form,
             payload=fields,
-            status=Submission.Status.HAM,
-            spam_score=None,
-            model_version=None,
+            status=Submission.Status.SPAM,
+            spam_score=verdict.spam_score,
+            spam_signals=verdict.signals,
+            model_version=verdict.model_version,
             source_ip_hash=ip_hash,
         )
-        # check-then-insert can overshoot slightly under concurrency (two
-        # requests both pass check_limit before either commits); accepted.
-        UsageEvent.objects.create(account=form.account, kind="submission", quantity=1)
+        submission_id = submission.id
+    else:  # Form.SpamAction.DROP
+        submission_id = uuid.uuid4()
 
-    if wants_json(request):
-        response = JsonResponse({"ok": True, "id": str(submission.id)}, status=200)
-    else:
-        response = HttpResponse(status=303)
-        response["Location"] = resolve_redirect_url(form, reserved)
-
-    apply_cors_headers(response, origin)
-    return _log(form, response, start_time)
+    response = _build_success_response(request, form, reserved, origin, submission_id)
+    return _log(form, response, start_time, verdict=verdict)

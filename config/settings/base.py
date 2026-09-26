@@ -207,3 +207,10 @@ R2_BUCKET = env("R2_BUCKET", default="")
 # Same rationale as MODEL_ARTIFACT_DIR: outside /app so the Dockerfile can
 # pre-create and chown it for appuser.
 SPAM_DATASET_DIR = env("SPAM_DATASET_DIR", default="/var/lib/easyforms/data")
+
+# Spam scoring (Day 9, SRS FR-4). SPAM_MODEL_REFRESH_SECONDS bounds how stale the
+# in-process scorer's active ModelVersion can be. The other two tune the _ts
+# heuristic (CLAUDE.md rule 9 — soft/spoofable, never a hard signal on its own).
+SPAM_MODEL_REFRESH_SECONDS = env.int("SPAM_MODEL_REFRESH_SECONDS", default=60)
+SPAM_MIN_SUBMIT_SECONDS = env.float("SPAM_MIN_SUBMIT_SECONDS", default=3)
+SPAM_FAST_SUBMIT_MARGIN = env.float("SPAM_FAST_SUBMIT_MARGIN", default=0.25)

@@ -53,6 +53,9 @@ class Submission(models.Model):
     payload = models.JSONField()
     # null = scored by heuristics only, no model probability available (rule 10)
     spam_score = models.FloatField(null=True, blank=True)
+    # heuristic signal names that fired ("honeypot", "fast_submit", "model");
+    # populated even in heuristics-only mode (fast_submit is observability-only there)
+    spam_signals = models.JSONField(default=list, blank=True)
     status = models.CharField(max_length=10, choices=Status.choices)
     corrected = models.BooleanField(default=False)
     source_ip_hash = models.CharField(max_length=64)

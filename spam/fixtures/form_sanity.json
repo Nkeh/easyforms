@@ -1,0 +1,195 @@
+[
+  {
+    "label": "ham",
+    "fields": {
+      "name": "Priya Nair",
+      "email": "priya.nair@example.com",
+      "phone": "555-0134",
+      "message": "Hi, could you send a quote for replacing our office windows? We have about 12 units, single-pane, and would like to switch to double-glazed. Feel free to call me at the number above any weekday afternoon."
+    }
+  },
+  {
+    "label": "ham",
+    "fields": {
+      "name": "Marcus Webb",
+      "email": "marcus.webb@buildright.example",
+      "website": "https://buildright.example",
+      "message": "We're a small contracting firm and saw your ad in the local paper. Do you do subcontracting work for kitchen remodels? Our site is linked above if you want to see past projects."
+    }
+  },
+  {
+    "label": "ham",
+    "fields": {
+      "name": "Jenny",
+      "message": "hi, call me when you get a chance, it's about the invoice from last week"
+    }
+  },
+  {
+    "label": "ham",
+    "fields": {
+      "name": "David Okafor",
+      "email": "d.okafor@example.org",
+      "message": "Applying for the part-time delivery driver position posted on your careers page. I have a clean license and 3 years of experience. Happy to send a resume if you let me know the best email."
+    }
+  },
+  {
+    "label": "ham",
+    "fields": {
+      "name": "Sarah Kim",
+      "email": "sarahkim88@example.com",
+      "phone": "555-0192",
+      "message": "My order #4821 arrived damaged - the box was crushed on one side. Could someone help me arrange a replacement or refund? Thanks in advance."
+    }
+  },
+  {
+    "label": "ham",
+    "fields": {
+      "name": "Tom",
+      "phone": "555-0177",
+      "message": "quick question - are you open this saturday? want to bring the car in for the noise i mentioned on the phone"
+    }
+  },
+  {
+    "label": "ham",
+    "fields": {
+      "name": "Angela Ruiz",
+      "email": "angela.ruiz@northwind-events.example",
+      "message": "We're planning a company retreat for 40 people in October and would love a catering quote. Do you have a sample menu you could send over? Budget is flexible within reason."
+    }
+  },
+  {
+    "label": "ham",
+    "fields": {
+      "name": "Ben Foster",
+      "email": "ben.f@example.net",
+      "message": "Following up on the estimate you gave me last Tuesday - just want to confirm the start date is still the 14th. Let me know if anything's changed."
+    }
+  },
+  {
+    "label": "ham",
+    "fields": {
+      "name": "Grace",
+      "message": "call me back please, missed your call earlier - 555-0163"
+    }
+  },
+  {
+    "label": "ham",
+    "fields": {
+      "name": "Liam O'Connor",
+      "email": "liam.oconnor@example.com",
+      "website": "https://oconnorstudio.example",
+      "message": "Love your portfolio work. I run a small design studio (linked above) and wondered if you take freelance referrals when you're overbooked - happy to reciprocate."
+    }
+  },
+  {
+    "label": "ham",
+    "fields": {
+      "name": "Renee Aslan",
+      "email": "renee.a@example.com",
+      "message": "Is the apartment listed on 4th street still available? I'd like to schedule a viewing this week if possible, mornings work best for me."
+    }
+  },
+  {
+    "label": "ham",
+    "fields": {
+      "name": "Chris Patterson",
+      "phone": "555-0148",
+      "email": "chris.p@example.com",
+      "message": "The support ticket I submitted yesterday (#8834) still shows as open - just checking in on the status since it's been about 24 hours."
+    }
+  },
+  {
+    "label": "spam",
+    "fields": {
+      "name": "SEO Growth Team",
+      "email": "outreach@rank-boost-pro.example",
+      "message": "I noticed your website could use better rankings on Google. We offer premium backlink packages starting at $99/month - guaranteed first page results within 30 days or your money back. Reply to learn more."
+    }
+  },
+  {
+    "label": "spam",
+    "fields": {
+      "name": "CryptoGains Team",
+      "email": "admin@cryptogains-daily.example",
+      "message": "CONGRATULATIONS!!! You've been selected for early access to the hottest new crypto token of 2026. Invest just $50 today and watch it grow 100x. Limited spots available, act now before it's too late!"
+    }
+  },
+  {
+    "label": "spam",
+    "fields": {
+      "name": "Link Building Pro",
+      "message": "Hi there, buy backlinks cheap at www.linkfarm1.example www.linkfarm2.example www.linkfarm3.example www.linkfarm4.example - guaranteed DA50+ placements, bulk discounts available, click here to order now www.linkfarm-order.example"
+    }
+  },
+  {
+    "label": "spam",
+    "fields": {
+      "name": "Billing Department",
+      "email": "billing@invoice-alert-service.example",
+      "message": "INVOICE OVERDUE: Your account has an outstanding balance of $847.00. Failure to pay within 24 hours will result in service suspension and additional late fees. Click here immediately to settle: http://pay-now-invoice.example"
+    }
+  },
+  {
+    "label": "spam",
+    "fields": {
+      "name": "Website Audit Bot",
+      "email": "noreply@site-audit-x.example",
+      "message": "I noticed your website has several SEO issues that are hurting your traffic. We ran a free audit and found 47 critical problems. Get your full report and a discounted fix package at www.siteaudit-x.example/report"
+    }
+  },
+  {
+    "label": "spam",
+    "fields": {
+      "name": "Forex Signals",
+      "message": "MAKE $5000 A WEEK FROM HOME!!! Our proven forex trading signals have a 98% win rate. No experience needed. Join thousands of successful traders today at www.forexsignals-elite.example - limited time bonus included"
+    }
+  },
+  {
+    "label": "spam",
+    "fields": {
+      "name": "Pharma Direct",
+      "email": "sales@pharma-direct-deals.example",
+      "message": "CHEAP MEDS NO PRESCRIPTION NEEDED! Save up to 80% on brand name pharmaceuticals shipped discreetly to your door. Order now at www.pharma-direct-deals.example/order and use code SAVE80 at checkout"
+    }
+  },
+  {
+    "label": "spam",
+    "fields": {
+      "name": "Digital Marketing Agency",
+      "email": "leads@growthhack-agency.example",
+      "website": "http://growthhack-agency.example",
+      "message": "I came across your website and wanted to reach out. We specialize in explosive traffic growth using proven link building, guest posting, and PBN strategies. Check out our case studies at growthhack-agency.example and book a free call"
+    }
+  },
+  {
+    "label": "spam",
+    "fields": {
+      "name": "Prize Notification",
+      "message": "YOU HAVE WON!!! Your email was randomly selected to receive a FREE $1000 gift card. Claim your prize now before it expires at www.claim-your-prize-now.example - hurry, only 24 hours left to redeem!!!"
+    }
+  },
+  {
+    "label": "spam",
+    "fields": {
+      "name": "Replica Outlet",
+      "email": "shop@luxury-replica-outlet.example",
+      "message": "Luxury watches and handbags at 90% off retail price! Exact replicas of top designer brands, worldwide shipping, discreet packaging. Shop now at www.luxury-replica-outlet.example before stock runs out"
+    }
+  },
+  {
+    "label": "spam",
+    "fields": {
+      "name": "Guest Post Team",
+      "email": "guestposts@content-network-xyz.example",
+      "message": "We manage a network of 500+ high authority websites accepting guest posts and sponsored content. Get your article published on DA70+ sites starting at $30 each. Bulk packages available, visit content-network-xyz.example www.content-network-xyz.example/pricing"
+    }
+  },
+  {
+    "label": "spam",
+    "fields": {
+      "name": "Loan Approval Team",
+      "email": "approvals@instant-loan-direct.example",
+      "message": "PRE-APPROVED! You qualify for an instant loan up to $50,000 with NO credit check and 0% interest for the first 6 months. Funds deposited within 24 hours. Apply now at www.instant-loan-direct.example before this offer expires!!!"
+    }
+  }
+]
