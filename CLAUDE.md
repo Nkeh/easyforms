@@ -82,6 +82,8 @@ docker compose run --rm web python manage.py makemigrations / migrate
 - **End every task with a summary:** files changed, FRs covered, how to verify
   manually, test results, deviations from the SRS, follow-ups, suggested
   commit message(s).
+- **Commit suggestions must be ordered so every commit passes tests on its own.**
+  Prefer fewer, cohesive commits over splitting one feature across broken states.
 
 ## Progress
 - [*] Day 1 — Compose skeleton, settings, custom user stub, healthz, tooling
