@@ -150,3 +150,23 @@ def test_snippet_contains_endpoint_url_and_honeypot(client):
 
     assert f"http://example.test/f/{form.token}" in content
     assert "_honeypot" in content
+
+
+def test_detail_shows_warning_when_no_allowed_origins(client):
+    user = _make_user()
+    form = _make_form(user.account, allowed_origins=[])
+    client.force_login(user)
+
+    response = client.get(f"/forms/{form.pk}")
+
+    assert "Any website can submit to this form" in response.content.decode()
+
+
+def test_detail_hides_warning_when_allowed_origins_set(client):
+    user = _make_user()
+    form = _make_form(user.account, allowed_origins=["https://example.com"])
+    client.force_login(user)
+
+    response = client.get(f"/forms/{form.pk}")
+
+    assert "Any website can submit to this form" not in response.content.decode()

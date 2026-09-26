@@ -28,6 +28,12 @@
     </form>
   {% endif %}
 
+  {% if not form_obj.allowed_origins %}
+    <p class="warning">
+      Any website can submit to this form. Add allowed origins to restrict it.
+    </p>
+  {% endif %}
+
   <h2>Settings</h2>
   <form method="post" novalidate>
     {% csrf_token %}
