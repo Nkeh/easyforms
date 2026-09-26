@@ -2,15 +2,19 @@ import logging
 import time
 
 from django.conf import settings
+from django.db import transaction
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 
+from billing.limits import check_limit
+from billing.models import UsageEvent
 from core.utils import hash_ip
 from forms_app.models import Form, Submission
 from ingest.ip import get_client_ip
 from ingest.origin_policy import allowed_origin, apply_cors_headers
 from ingest.parsing import InvalidPayload, PayloadTooLarge, UnsupportedMediaType, parse_body
+from ingest.rate_limit import check_ip_limit, check_token_limit
 from ingest.redirects import resolve_redirect_url
 from ingest.responses import error_response, wants_json
 
@@ -51,10 +55,25 @@ def submit(request, token):
                 response = error_response(request, "payload_too_large", 413, form=None)
                 return _log(None, response, start_time)
 
+    ip_hash = hash_ip(get_client_ip(request))
+    if request.method == "POST":
+        ip_limit = check_ip_limit(ip_hash)
+        if not ip_limit.allowed:
+            response = error_response(request, "rate_limited", 429, form=None)
+            response["Retry-After"] = str(ip_limit.retry_after)
+            return _log(None, response, start_time)
+
     form = Form.objects.filter(token=token, is_active=True).first()
     if form is None:
         response = error_response(request, "not_found", 404, form=None)
         return _log(None, response, start_time)
+
+    if request.method == "POST":
+        token_limit = check_token_limit(form.token)
+        if not token_limit.allowed:
+            response = error_response(request, "rate_limited", 429, form=form)
+            response["Retry-After"] = str(token_limit.retry_after)
+            return _log(form, response, start_time)
 
     origin = request.headers.get("Origin")
     if not allowed_origin(form, origin):
@@ -81,14 +100,25 @@ def submit(request, token):
         response = error_response(request, "invalid_payload", 422, form=form)
         return _log(form, response, start_time)
 
-    submission = Submission.objects.create(
-        form=form,
-        payload=fields,
-        status=Submission.Status.HAM,
-        spam_score=None,
-        model_version=None,
-        source_ip_hash=hash_ip(get_client_ip(request)),
-    )
+    # Day 9 will insert spam scoring here and only meter/limit-check ham
+    # submissions (CLAUDE.md rule 7); every submission is ham until then.
+    submission_limit = check_limit(form.account, "submissions")
+    if not submission_limit.allowed:
+        response = error_response(request, "quota_exceeded", 429, form=form)
+        return _log(form, response, start_time)
+
+    with transaction.atomic():
+        submission = Submission.objects.create(
+            form=form,
+            payload=fields,
+            status=Submission.Status.HAM,
+            spam_score=None,
+            model_version=None,
+            source_ip_hash=ip_hash,
+        )
+        # check-then-insert can overshoot slightly under concurrency (two
+        # requests both pass check_limit before either commits); accepted.
+        UsageEvent.objects.create(account=form.account, kind="submission", quantity=1)
 
     if wants_json(request):
         response = JsonResponse({"ok": True, "id": str(submission.id)}, status=200)

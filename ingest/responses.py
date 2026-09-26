@@ -13,6 +13,8 @@ _MESSAGES = {
         "application/x-www-form-urlencoded, or multipart/form-data."
     ),
     "invalid_payload": "The submitted data could not be processed.",
+    "rate_limited": "Too many requests. Please slow down.",
+    "quota_exceeded": "This form is not accepting new submissions right now.",
 }
 
 
