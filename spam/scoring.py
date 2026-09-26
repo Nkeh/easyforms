@@ -41,6 +41,26 @@ def _resolve_threshold(model_version: ModelVersion) -> float:
     return model_version.threshold if model_version.threshold is not None else 0.5
 
 
+def _effective_enforce(model_version: ModelVersion | None) -> bool:
+    """Whether a model verdict of "spam" should actually change status, per
+    SPAM_MODEL_MODE. Recomputed fresh on every call (not cached) so it's a
+    pure function of current settings + the model's own gate result — picks
+    up a settings override immediately and needs no extra state on Scorer.
+    """
+    mode = settings.SPAM_MODEL_MODE
+    if mode == "enforce":
+        return True
+    if mode == "shadow":
+        return False
+    if mode != "auto":
+        logger.warning("spam scorer: unrecognized SPAM_MODEL_MODE=%r, treating as shadow", mode)
+        return False
+    if model_version is None:
+        return True  # unreachable from score() — pipeline is None short-circuits first
+    form_sanity = (model_version.metrics or {}).get("form_sanity") or {}
+    return bool(form_sanity.get("passed", False))
+
+
 class Scorer:
     def __init__(self) -> None:
         self._lock = threading.Lock()
@@ -90,8 +110,12 @@ class Scorer:
         text = extract_text(fields)
         p = float(pipeline.predict_proba([text])[0][1])
         if p >= effective_threshold:
-            signals.append("model")
-            status = "spam"
+            if _effective_enforce(model_version):
+                signals.append("model")
+                status = "spam"
+            else:
+                signals.append("model_shadow")
+                status = "ham"
         else:
             status = "ham"
         return Verdict(status, p, model_version, signals, self._elapsed_ms(start))
@@ -149,6 +173,12 @@ class Scorer:
         self._pipeline = pipeline
         self._model_version = mv
         self._failure_logged = False
+        logger.info(
+            "spam scorer: loaded model %s, mode=%s (%s)",
+            mv.version,
+            settings.SPAM_MODEL_MODE,
+            "enforce" if _effective_enforce(mv) else "shadow",
+        )
 
     def _note_failure(self, reason: str, level: int = logging.ERROR) -> None:
         if not self._failure_logged:

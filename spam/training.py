@@ -24,7 +24,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.pipeline import FeatureUnion, Pipeline
 from sklearn.preprocessing import StandardScaler
 
-from spam.features import TextStatsExtractor
+from spam.features import TextStatsExtractor, normalize_text
+from spam.gate import GateFailedError, evaluate_form_sanity
 from spam.models import ModelVersion
 from spam.storage import ArtifactStore, get_artifact_store
 
@@ -102,11 +103,15 @@ def build_pipeline() -> Pipeline:
                     [
                         (
                             "tfidf_word",
-                            TfidfVectorizer(analyzer="word", ngram_range=(1, 2)),
+                            TfidfVectorizer(
+                                analyzer="word", ngram_range=(1, 2), preprocessor=normalize_text
+                            ),
                         ),
                         (
                             "tfidf_char",
-                            TfidfVectorizer(analyzer="char_wb", ngram_range=(3, 5)),
+                            TfidfVectorizer(
+                                analyzer="char_wb", ngram_range=(3, 5), preprocessor=normalize_text
+                            ),
                         ),
                         (
                             "numeric",
@@ -160,35 +165,53 @@ def train_and_save(
     *,
     activate: bool = False,
     dry_run: bool = False,
+    force: bool = False,
     min_precision: float = 0.98,
     dataset_name: str = "uci_sms_spam_collection",
+    sources: dict | None = None,
+    gate_max_fp: int = 1,
+    gate_min_spam_recall: float = 0.70,
     store: ArtifactStore | None = None,
 ) -> TrainingResult:
     y = [1 if label == "spam" else 0 for label, _ in rows]
     texts = [text for _, text in rows]
 
-    x_train, x_test, y_train, y_test = train_test_split(
-        texts, y, test_size=0.2, random_state=RANDOM_STATE, stratify=y
+    # Stratified 70/15/15 train/validation/test. Threshold is selected on
+    # validation only and final metrics reported on test only, so neither is
+    # ever tuned against the data it's also being scored on (leakage fix).
+    x_temp, x_test, y_temp, y_test = train_test_split(
+        texts, y, test_size=0.15, random_state=RANDOM_STATE, stratify=y
+    )
+    x_train, x_val, y_train, y_val = train_test_split(
+        x_temp, y_temp, test_size=0.15 / 0.85, random_state=RANDOM_STATE, stratify=y_temp
     )
 
     pipeline = build_pipeline()
     pipeline.fit(x_train, y_train)
 
     spam_idx = list(pipeline.named_steps["clf"].classes_).index(1)
-    probs = pipeline.predict_proba(x_test)[:, spam_idx]
+    val_probs = pipeline.predict_proba(x_val)[:, spam_idx]
+    threshold, used_fallback = select_threshold(y_val, val_probs, min_precision=min_precision)
 
-    threshold, used_fallback = select_threshold(y_test, probs, min_precision=min_precision)
+    test_probs = pipeline.predict_proba(x_test)[:, spam_idx]
+    gate_result = evaluate_form_sanity(
+        pipeline, threshold, max_fp=gate_max_fp, min_spam_recall=gate_min_spam_recall
+    )
 
     metrics = {
-        **_metrics_at_threshold(y_test, probs, threshold),
+        **_metrics_at_threshold(y_test, test_probs, threshold),
         "threshold": threshold,
         "threshold_used_fallback": used_fallback,
         "dataset": dataset_name,
         "n_rows": len(rows),
         "n_train": len(x_train),
+        "n_val": len(x_val),
         "n_test": len(x_test),
         "class_balance": {"ham": y.count(0), "spam": y.count(1)},
+        "form_sanity": {k: v for k, v in gate_result.items() if k != "rows"},
     }
+    if sources is not None:
+        metrics["sources"] = sources
 
     version = timezone.now().strftime("%Y%m%dT%H%M%SZ")
 
@@ -226,6 +249,15 @@ def train_and_save(
     )
 
     if activate:
+        if not gate_result["passed"] and not force:
+            raise GateFailedError(
+                f"form_sanity gate failed for {version}: fp_count={gate_result['fp_count']} "
+                f"(max {gate_max_fp}), spam_recall={gate_result['spam_recall']:.3f} "
+                f"(min {gate_min_spam_recall:.2f}); ModelVersion saved but not activated "
+                f"(pass force=True to override)"
+            )
+        if not gate_result["passed"]:
+            logger.warning("activating %s despite failing form_sanity gate (force=True)", version)
         ModelVersion.objects.activate(model_version)
         model_version.refresh_from_db()
 

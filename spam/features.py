@@ -58,6 +58,29 @@ def _log_length(text: str) -> float:
     return math.log1p(len(text))
 
 
+_URL_TOKEN_RE = re.compile(r"(?:https?://|www\.)\S+")
+_EMAIL_TOKEN_RE = re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+")
+_PHONE_TOKEN_RE = re.compile(r"\+?\d[\d().\-\s]{6,}\d")
+_DIGIT_RUN_RE = re.compile(r"\d+")
+
+
+def normalize_text(text: str) -> str:
+    """Pipeline preprocessor (wired into the TF-IDF vectorizers, not called
+    by extract_text): lowercase, then replace URLs/emails/phone-like number
+    sequences/other digit runs with placeholder tokens, in that order so
+    each substitution only sees what's left after the prior one (a URL's
+    query string shouldn't read as an email; an email's digits shouldn't be
+    eaten by the phone pattern; "555-0134" should become one phonetoken, not
+    three numtokens split by punctuation).
+    """
+    text = text.lower()
+    text = _URL_TOKEN_RE.sub(" urltoken ", text)
+    text = _EMAIL_TOKEN_RE.sub(" emailtoken ", text)
+    text = _PHONE_TOKEN_RE.sub(" phonetoken ", text)
+    text = _DIGIT_RUN_RE.sub(" numtoken ", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
 class TextStatsExtractor(BaseEstimator, TransformerMixin):
     """Engineered numeric features computed directly from submission text.
 

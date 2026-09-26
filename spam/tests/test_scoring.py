@@ -10,7 +10,7 @@ from django.utils import timezone
 
 import spam.training as training_module
 from spam.models import ModelVersion
-from spam.scoring import Scorer, _parse_ts
+from spam.scoring import Scorer, _effective_enforce, _parse_ts
 from spam.storage import LocalArtifactStore
 from spam.training import load_dataset, train_and_save
 
@@ -27,9 +27,19 @@ class _StubPipeline:
         return np.array([[1 - self.spam_prob, self.spam_prob] for _ in texts])
 
 
-def _stub_model_version(threshold=0.5):
+def _stub_model_version(threshold=0.5, metrics=None):
+    # Default metrics represent a model that has PASSED the form_sanity gate,
+    # so pre-existing tests written before shadow mode existed (which assume
+    # a model verdict is always enforced) keep working unchanged under the
+    # default SPAM_MODEL_MODE=auto. Tests that specifically want to exercise
+    # shadow/gate-failure behavior pass their own metrics=.
+    default_metrics = {"form_sanity": {"passed": True}}
     return ModelVersion(
-        id=uuid.uuid4(), version="stub", artifact_key="stub.joblib", threshold=threshold
+        id=uuid.uuid4(),
+        version="stub",
+        artifact_key="stub.joblib",
+        threshold=threshold,
+        metrics=metrics if metrics is not None else default_metrics,
     )
 
 
@@ -250,9 +260,12 @@ def test_scorer_picks_up_newly_activated_version_after_refresh_interval(
     # train_and_save's version tag has second resolution (timezone.now()); two
     # calls within the same wall-clock second would collide on the unique
     # `version` column, so pin distinct timestamps for the two trainings.
+    # force=True on both trainings: the tiny 39-row SMS-only fixture has no
+    # realistic chance of passing the form_sanity gate; this test is only
+    # about version-refresh timing, not gate/model quality.
     base_time = timezone.now()
     monkeypatch.setattr(training_module.timezone, "now", lambda: base_time)
-    v1 = train_and_save(rows, activate=True, store=store).model_version
+    v1 = train_and_save(rows, activate=True, force=True, store=store).model_version
 
     scorer = Scorer()
     now = timezone.now()
@@ -260,7 +273,7 @@ def test_scorer_picks_up_newly_activated_version_after_refresh_interval(
     assert scorer._model_version.id == v1.id
 
     monkeypatch.setattr(training_module.timezone, "now", lambda: base_time + timedelta(seconds=5))
-    v2 = train_and_save(rows, activate=True, store=store).model_version
+    v2 = train_and_save(rows, activate=True, force=True, store=store).model_version
     assert v1.id != v2.id
 
     # Interval not yet elapsed: still serving v1.
@@ -271,3 +284,153 @@ def test_scorer_picks_up_newly_activated_version_after_refresh_interval(
     scorer._last_checked = time.monotonic() - settings.SPAM_MODEL_REFRESH_SECONDS - 1
     scorer.score({"message": "hello there"}, {}, now)
     assert scorer._model_version.id == v2.id
+
+
+# --- _effective_enforce / shadow mode (Day 9b) ------------------------------
+
+
+def test_effective_enforce_enforce_mode_always_true(settings):
+    settings.SPAM_MODEL_MODE = "enforce"
+    mv = _stub_model_version(metrics={"form_sanity": {"passed": False}})
+    assert _effective_enforce(mv) is True
+
+
+def test_effective_enforce_shadow_mode_always_false(settings):
+    settings.SPAM_MODEL_MODE = "shadow"
+    mv = _stub_model_version(metrics={"form_sanity": {"passed": True}})
+    assert _effective_enforce(mv) is False
+
+
+def test_effective_enforce_auto_mode_true_when_gate_passed(settings):
+    settings.SPAM_MODEL_MODE = "auto"
+    mv = _stub_model_version(metrics={"form_sanity": {"passed": True}})
+    assert _effective_enforce(mv) is True
+
+
+def test_effective_enforce_auto_mode_false_when_gate_failed(settings):
+    settings.SPAM_MODEL_MODE = "auto"
+    mv = _stub_model_version(metrics={"form_sanity": {"passed": False}})
+    assert _effective_enforce(mv) is False
+
+
+def test_effective_enforce_auto_mode_false_when_no_form_sanity_key(settings):
+    settings.SPAM_MODEL_MODE = "auto"
+    mv = _stub_model_version(metrics={})  # legacy-style row, predates the gate
+    assert _effective_enforce(mv) is False
+
+
+def test_effective_enforce_unrecognized_mode_falls_back_to_shadow_and_logs_warning(
+    settings, caplog
+):
+    settings.SPAM_MODEL_MODE = "bogus"
+    mv = _stub_model_version(metrics={"form_sanity": {"passed": True}})
+
+    with caplog.at_level(logging.WARNING, logger="spam"):
+        result = _effective_enforce(mv)
+
+    assert result is False
+    assert any(r.levelno == logging.WARNING for r in caplog.records)
+
+
+def test_score_shadow_mode_keeps_status_ham_and_adds_model_shadow_signal(settings):
+    settings.SPAM_MODEL_MODE = "shadow"
+    stub = _StubPipeline(spam_prob=0.9)
+    scorer = _ready_scorer(stub, _stub_model_version(threshold=0.5))
+    now = timezone.now()
+
+    verdict = scorer.score({"message": "spammy text"}, {}, now)
+
+    assert verdict.status == "ham"
+    assert "model_shadow" in verdict.signals
+    assert "model" not in verdict.signals
+    assert verdict.spam_score == 0.9
+    assert verdict.model_version is not None
+
+
+def test_score_enforce_mode_flips_status_to_spam(settings):
+    settings.SPAM_MODEL_MODE = "enforce"
+    stub = _StubPipeline(spam_prob=0.9)
+    scorer = _ready_scorer(stub, _stub_model_version(threshold=0.5))
+    now = timezone.now()
+
+    verdict = scorer.score({"message": "spammy text"}, {}, now)
+
+    assert verdict.status == "spam"
+    assert "model" in verdict.signals
+    assert "model_shadow" not in verdict.signals
+
+
+def test_score_auto_mode_enforces_when_gate_passed(settings):
+    settings.SPAM_MODEL_MODE = "auto"
+    stub = _StubPipeline(spam_prob=0.9)
+    mv = _stub_model_version(threshold=0.5, metrics={"form_sanity": {"passed": True}})
+    scorer = _ready_scorer(stub, mv)
+    now = timezone.now()
+
+    verdict = scorer.score({"message": "spammy text"}, {}, now)
+
+    assert verdict.status == "spam"
+    assert "model" in verdict.signals
+
+
+def test_score_auto_mode_shadows_when_gate_failed(settings):
+    settings.SPAM_MODEL_MODE = "auto"
+    stub = _StubPipeline(spam_prob=0.9)
+    mv = _stub_model_version(threshold=0.5, metrics={"form_sanity": {"passed": False}})
+    scorer = _ready_scorer(stub, mv)
+    now = timezone.now()
+
+    verdict = scorer.score({"message": "spammy text"}, {}, now)
+
+    assert verdict.status == "ham"
+    assert "model_shadow" in verdict.signals
+
+
+def test_score_honeypot_wins_regardless_of_mode(settings):
+    for mode in ("auto", "enforce", "shadow"):
+        settings.SPAM_MODEL_MODE = mode
+        stub = _StubPipeline(spam_prob=0.01)  # model itself would say ham
+        mv = _stub_model_version(threshold=0.5, metrics={"form_sanity": {"passed": False}})
+        scorer = _ready_scorer(stub, mv)
+        now = timezone.now()
+
+        verdict = scorer.score({"message": "hi"}, {"_honeypot": "filled"}, now)
+
+        assert verdict.status == "spam"
+        assert verdict.signals == ["honeypot"]
+
+
+@pytest.mark.django_db
+def test_do_refresh_locked_logs_effective_mode_once_per_load_event(
+    tmp_path, settings, monkeypatch, caplog
+):
+    store = LocalArtifactStore(root=tmp_path / "backing")
+    settings.ARTIFACT_STORAGE = "local"
+    settings.MODEL_ARTIFACT_DIR = str(store.root)
+    settings.SPAM_MODEL_MODE = "auto"
+
+    rows = load_dataset(FIXTURE_TSV)
+    base_time = timezone.now()
+    monkeypatch.setattr(training_module.timezone, "now", lambda: base_time)
+    v1 = train_and_save(rows, activate=True, force=True, store=store).model_version
+
+    scorer = Scorer()
+    now = timezone.now()
+
+    with caplog.at_level(logging.INFO, logger="spam"):
+        scorer.score({"message": "hello"}, {}, now)  # first load: v1
+        scorer.score({"message": "hello"}, {}, now)  # no-op: interval not elapsed
+
+    load_logs = [r for r in caplog.records if "loaded model" in r.getMessage()]
+    assert len(load_logs) == 1
+
+    monkeypatch.setattr(training_module.timezone, "now", lambda: base_time + timedelta(seconds=5))
+    v2 = train_and_save(rows, activate=True, force=True, store=store).model_version
+    assert v1.id != v2.id
+
+    scorer._last_checked = time.monotonic() - settings.SPAM_MODEL_REFRESH_SECONDS - 1
+    with caplog.at_level(logging.INFO, logger="spam"):
+        scorer.score({"message": "hello"}, {}, now)  # second load: v2
+
+    load_logs = [r for r in caplog.records if "loaded model" in r.getMessage()]
+    assert len(load_logs) == 2

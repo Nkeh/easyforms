@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import environ
+from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -214,3 +215,15 @@ SPAM_DATASET_DIR = env("SPAM_DATASET_DIR", default="/var/lib/easyforms/data")
 SPAM_MODEL_REFRESH_SECONDS = env.int("SPAM_MODEL_REFRESH_SECONDS", default=60)
 SPAM_MIN_SUBMIT_SECONDS = env.float("SPAM_MIN_SUBMIT_SECONDS", default=3)
 SPAM_FAST_SUBMIT_MARGIN = env.float("SPAM_FAST_SUBMIT_MARGIN", default=0.25)
+
+# Day 9b — "auto" enforces the active model only if its stored
+# metrics["form_sanity"]["passed"] is true (see spam/gate.py), otherwise
+# shadows it (scores/logs without blocking real ham); "enforce"/"shadow"
+# force one behavior regardless of gate state. Validated at boot (not per
+# request) so a typo'd env var fails the whole process once, loudly, rather
+# than every submission.
+SPAM_MODEL_MODE = env("SPAM_MODEL_MODE", default="auto")
+if SPAM_MODEL_MODE not in {"auto", "enforce", "shadow"}:
+    raise ImproperlyConfigured(
+        f"SPAM_MODEL_MODE must be one of auto/enforce/shadow, got {SPAM_MODEL_MODE!r}"
+    )

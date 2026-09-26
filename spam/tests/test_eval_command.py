@@ -19,7 +19,10 @@ def trained_version(tmp_path, settings):
     settings.ARTIFACT_STORAGE = "local"
     settings.MODEL_ARTIFACT_DIR = str(tmp_path / "artifacts")
     store = LocalArtifactStore(root=tmp_path / "artifacts")
-    result = train_and_save(load_dataset(FIXTURE_TSV), activate=True, store=store)
+    # force=True: a model trained on the tiny 39-row SMS-only fixture has no
+    # realistic chance of passing the form_sanity gate; these tests are about
+    # the eval_spam_model command's reporting, not gate/model quality.
+    result = train_and_save(load_dataset(FIXTURE_TSV), activate=True, force=True, store=store)
     return result.model_version
 
 
@@ -57,3 +60,51 @@ def test_eval_prints_one_line_per_fixture_entry(trained_version):
     lines = [line for line in out.getvalue().splitlines() if line.startswith("[")]
     entries = json.loads(FORM_SANITY_JSON.read_text())
     assert len(lines) == len(entries)
+
+
+def test_eval_reports_gate_pass_fail_line(trained_version):
+    out = StringIO()
+    call_command("eval_spam_model", stdout=out)
+
+    output = out.getvalue()
+    assert "gate: passed=" in output
+    assert "fp_count=" in output
+    assert "spam_recall=" in output
+
+
+def test_eval_delegates_entirely_to_evaluate_form_sanity(trained_version, monkeypatch):
+    calls = []
+    from spam import gate as gate_module
+
+    real_evaluate = gate_module.evaluate_form_sanity
+
+    def spy(*args, **kwargs):
+        calls.append((args, kwargs))
+        return real_evaluate(*args, **kwargs)
+
+    monkeypatch.setattr("spam.management.commands.eval_spam_model.evaluate_form_sanity", spy)
+
+    call_command("eval_spam_model")
+
+    assert len(calls) == 1
+
+
+def test_eval_gate_cli_flags_default_and_override(trained_version, monkeypatch):
+    captured = {}
+    from spam import gate as gate_module
+
+    real_evaluate = gate_module.evaluate_form_sanity
+
+    def spy(pipeline, threshold, **kwargs):
+        captured.update(kwargs)
+        return real_evaluate(pipeline, threshold, **kwargs)
+
+    monkeypatch.setattr("spam.management.commands.eval_spam_model.evaluate_form_sanity", spy)
+
+    call_command("eval_spam_model")
+    assert captured["max_fp"] == 1
+    assert captured["min_spam_recall"] == 0.70
+
+    call_command("eval_spam_model", "--gate-max-fp", "3", "--gate-min-spam-recall", "0.5")
+    assert captured["max_fp"] == 3
+    assert captured["min_spam_recall"] == 0.5
