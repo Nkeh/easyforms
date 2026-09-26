@@ -1,0 +1,7 @@
+Hi {{ user.email }},
+
+Please verify your EasyForms account by visiting this link:
+
+{{ verify_url }}
+
+This link expires in 3 days. If you didn't create an account, ignore this email.
