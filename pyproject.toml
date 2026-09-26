@@ -10,6 +10,8 @@ dependencies = [
     "django-rq>=3.0",
     "redis>=5.0",
     "gunicorn>=23.0",
+    "scikit-learn>=1.9,<1.10",
+    "boto3>=1.43,<1.44",
 ]
 
 [dependency-groups]

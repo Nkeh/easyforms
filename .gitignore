@@ -9,3 +9,4 @@ media/
 .pytest_cache/
 .ruff_cache/
 db.sqlite3
+var/

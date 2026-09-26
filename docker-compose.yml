@@ -7,6 +7,8 @@ services:
       DJANGO_SETTINGS_MODULE: config.settings.local
     volumes:
       - .:/app
+      - artifacts:/var/lib/easyforms/artifacts
+      - training_data:/var/lib/easyforms/data
     ports:
       - "8000:8000"
     depends_on:
@@ -23,6 +25,7 @@ services:
       DJANGO_SETTINGS_MODULE: config.settings.local
     volumes:
       - .:/app
+      - artifacts:/var/lib/easyforms/artifacts
     depends_on:
       db:
         condition: service_healthy
@@ -55,3 +58,5 @@ services:
 
 volumes:
   pgdata:
+  artifacts:
+  training_data:

@@ -82,8 +82,9 @@ docker compose run --rm web python manage.py makemigrations / migrate
 - **End every task with a summary:** files changed, FRs covered, how to verify
   manually, test results, deviations from the SRS, follow-ups, suggested
   commit message(s) and the corresponding files to add to each commit.
-- **Commit suggestions must be ordered so every commit passes tests on its own.**
-  Prefer fewer, cohesive commits over splitting one feature across broken states.
+- **Commit suggestions must be ordered so every commit passes tests on its own,
+  and a single file must never be split across commits.** When in doubt, suggest
+  one commit per day.
 - **Save each day's end-of-task summary** to docs/progress/day-NN.md (include it
   in the last suggested commit).
 - **Tests must include a GET of the edit page for an existing object** whenever

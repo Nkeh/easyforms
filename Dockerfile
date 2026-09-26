@@ -17,7 +17,9 @@ RUN uv sync --frozen --no-install-project
 COPY . .
 RUN uv sync --frozen
 
-RUN useradd --create-home --uid 1000 appuser && chown -R appuser:appuser /app
+RUN useradd --create-home --uid 1000 appuser \
+    && mkdir -p /var/lib/easyforms/artifacts /var/lib/easyforms/data \
+    && chown -R appuser:appuser /app /var/lib/easyforms
 USER appuser
 
 EXPOSE 8000

@@ -189,3 +189,21 @@ AUTH_RATE_LIMIT_LOGIN_EMAIL_PER_MINUTE = env.int(
 AUTH_RATE_LIMIT_SIGNUP_IP_PER_HOUR = env.int("AUTH_RATE_LIMIT_SIGNUP_IP_PER_HOUR", default=5)
 AUTH_RATE_LIMIT_RESET_IP_PER_HOUR = env.int("AUTH_RATE_LIMIT_RESET_IP_PER_HOUR", default=5)
 AUTH_RATE_LIMIT_RESET_EMAIL_PER_HOUR = env.int("AUTH_RATE_LIMIT_RESET_EMAIL_PER_HOUR", default=3)
+
+# Model artifact storage (Day 8 — SRS section 7). 'local' for dev/CI; 's3'
+# talks to Cloudflare R2 via boto3's S3-compatible API. MODEL_ARTIFACT_DIR
+# doubles as the local load-time cache regardless of backend (CLAUDE.md rule
+# 10 — model boot must not require R2 reachability). Lives outside /app (and
+# so outside the docker-compose bind mount) so the Dockerfile can create and
+# chown it for appuser before a fresh named volume is first mounted there.
+ARTIFACT_STORAGE = env("ARTIFACT_STORAGE", default="local")
+MODEL_ARTIFACT_DIR = env("MODEL_ARTIFACT_DIR", default="/var/lib/easyforms/artifacts")
+R2_ACCOUNT_ID = env("R2_ACCOUNT_ID", default="")
+R2_ACCESS_KEY_ID = env("R2_ACCESS_KEY_ID", default="")
+R2_SECRET_ACCESS_KEY = env("R2_SECRET_ACCESS_KEY", default="")
+R2_BUCKET = env("R2_BUCKET", default="")
+
+# Cache dir for the training corpus downloaded by `train_spam_model` (Day 8).
+# Same rationale as MODEL_ARTIFACT_DIR: outside /app so the Dockerfile can
+# pre-create and chown it for appuser.
+SPAM_DATASET_DIR = env("SPAM_DATASET_DIR", default="/var/lib/easyforms/data")
