@@ -2,10 +2,17 @@ import json
 from urllib.parse import urlencode
 
 import pytest
+from django.core.exceptions import RequestDataTooBig, TooManyFieldsSent
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import RequestFactory
 
-from ingest.parsing import InvalidPayload, UnsupportedMediaType, parse_body
+from ingest.parsing import (
+    InvalidPayload,
+    PayloadTooLarge,
+    UnsupportedMediaType,
+    _cap_body,
+    parse_body,
+)
 
 factory = RequestFactory()
 
@@ -134,3 +141,101 @@ def test_empty_payload_after_stripping_reserved_is_rejected():
 
     with pytest.raises(InvalidPayload):
         parse_body(request)
+
+
+def test_too_many_fields_raises(settings):
+    settings.INGEST_MAX_FIELDS = 2
+    request = _json_request({"a": "1", "b": "2", "c": "3"})
+
+    with pytest.raises(PayloadTooLarge):
+        parse_body(request)
+
+
+def test_oversize_field_value_raises(settings):
+    settings.INGEST_MAX_FIELD_CHARS = 5
+    request = _json_request({"name": "toolongvalue"})
+
+    with pytest.raises(PayloadTooLarge):
+        parse_body(request)
+
+
+def test_oversize_list_item_raises(settings):
+    settings.INGEST_MAX_FIELD_CHARS = 5
+    request = _json_request({"tags": ["ok", "toolongvalue"]})
+
+    with pytest.raises(PayloadTooLarge):
+        parse_body(request)
+
+
+def test_oversize_key_raises(settings):
+    settings.INGEST_MAX_KEY_CHARS = 3
+    request = _json_request({"toolongkey": "x"})
+
+    with pytest.raises(PayloadTooLarge):
+        parse_body(request)
+
+
+def test_body_exactly_at_limit_is_accepted(settings):
+    body = json.dumps({"name": "Jane"}).encode()
+    settings.INGEST_MAX_BODY_BYTES = len(body)
+    request = factory.post("/f/some-token", data=body, content_type="application/json")
+
+    fields, reserved = parse_body(request)
+
+    assert fields == {"name": "Jane"}
+
+
+def test_request_data_too_big_is_mapped_to_payload_too_large(monkeypatch):
+    def _raise(request):
+        raise RequestDataTooBig()
+
+    monkeypatch.setattr("ingest.parsing._parse_multipart_or_form", _raise)
+    request = _form_request({"name": "Jane"})
+
+    with pytest.raises(PayloadTooLarge):
+        parse_body(request)
+
+
+def test_too_many_fields_sent_is_mapped_to_payload_too_large(monkeypatch):
+    def _raise(request):
+        raise TooManyFieldsSent()
+
+    monkeypatch.setattr("ingest.parsing._parse_multipart_or_form", _raise)
+    request = _form_request({"name": "Jane"})
+
+    with pytest.raises(PayloadTooLarge):
+        parse_body(request)
+
+
+class _StubRequest:
+    """Minimal stand-in for a chunked request with no Content-Length header.
+
+    A real WSGIRequest can't exercise this branch: Django's WSGIRequest fixes
+    content_length=0 at construction time when the Content-Length header is
+    absent, capping any request.read() at 0 bytes regardless of what
+    _cap_body asks for. This defends against a deployment that behaves
+    differently (e.g. a different ASGI/WSGI server), not something reachable
+    via RequestFactory or the Django test client today.
+    """
+
+    def __init__(self, body: bytes):
+        self._chunk = body
+        self.META = {}
+
+    def read(self, n=-1):
+        return self._chunk[:n]
+
+
+def test_cap_body_raises_when_no_content_length_and_over_limit():
+    request = _StubRequest(b"x" * 10)
+
+    with pytest.raises(PayloadTooLarge):
+        _cap_body(request, max_bytes=5)
+
+
+def test_cap_body_accepts_when_no_content_length_and_within_limit():
+    request = _StubRequest(b"x" * 5)
+
+    _cap_body(request, max_bytes=5)
+
+    assert request._body == b"x" * 5

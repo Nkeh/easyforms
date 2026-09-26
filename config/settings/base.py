@@ -119,3 +119,58 @@ IP_HASH_SECRET = env("IP_HASH_SECRET")
 # REMOTE_ADDR directly; N > 0 = take the Nth address from the right of
 # X-Forwarded-For (client-supplied entries beyond that are never trusted).
 TRUSTED_PROXY_COUNT = env.int("TRUSTED_PROXY_COUNT", default=0)
+
+# Logging (NFR-10). stdout, stdlib-only, key=value formatter. Never logs
+# payload or IP — enforced by convention at each app's log call sites
+# (see ingest.views._log), not by this config.
+LOG_LEVEL = env("LOG_LEVEL", default="INFO")
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "keyvalue": {
+            "format": "level=%(levelname)s logger=%(name)s message=%(message)s",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "stream": "ext://sys.stdout",
+            "formatter": "keyvalue",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": LOG_LEVEL,
+    },
+    "loggers": {
+        name: {"handlers": ["console"], "level": LOG_LEVEL, "propagate": False}
+        for name in (
+            "django",
+            "core",
+            "accounts",
+            "billing",
+            "forms_app",
+            "ingest",
+            "spam",
+            "notifications",
+            "dashboard",
+        )
+    },
+}
+
+# Ingest request-size limits (FR-3.2, FR-3.6). Requests exceeding any of
+# these are rejected with 413 payload_too_large before being stored.
+INGEST_MAX_BODY_BYTES = env.int("INGEST_MAX_BODY_BYTES", default=65536)
+INGEST_MAX_FIELDS = env.int("INGEST_MAX_FIELDS", default=50)
+INGEST_MAX_FIELD_CHARS = env.int("INGEST_MAX_FIELD_CHARS", default=10000)
+INGEST_MAX_KEY_CHARS = env.int("INGEST_MAX_KEY_CHARS", default=100)
+
+# Keep Django's own body-size/field-count ceilings aligned with the ingest
+# limits above so its form/multipart parser (request.POST/.FILES) enforces
+# the same ceiling instead of a different, unformatted one. This does NOT
+# protect the JSON path — Django only checks these inside POST/FILES parsing,
+# never on raw request.body — ingest.parsing._cap_body covers JSON instead.
+DATA_UPLOAD_MAX_MEMORY_SIZE = INGEST_MAX_BODY_BYTES
+DATA_UPLOAD_MAX_NUMBER_FIELDS = INGEST_MAX_FIELDS

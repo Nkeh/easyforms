@@ -1,4 +1,4 @@
-def _normalize(origin: str) -> str:
+def normalize_origin(origin: str) -> str:
     return origin.strip().lower().rstrip("/")
 
 
@@ -12,8 +12,8 @@ def allowed_origin(form, origin: str | None) -> bool:
     if origin == "null":
         return False
 
-    normalized_allowed = {_normalize(o) for o in allowed}
-    return _normalize(origin) in normalized_allowed
+    normalized_allowed = {normalize_origin(o) for o in allowed}
+    return normalize_origin(origin) in normalized_allowed
 
 
 def apply_cors_headers(response, origin: str | None) -> None:

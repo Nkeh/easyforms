@@ -79,7 +79,9 @@ def test_nested_json_returns_422(client):
     )
 
     assert response.status_code == 422
-    assert response.json() == {"ok": False, "error": "invalid_payload"}
+    body = response.json()
+    assert body["ok"] is False
+    assert body["error"] == "invalid_payload"
     assert Submission.objects.count() == 0
 
 
@@ -117,7 +119,9 @@ def test_unknown_token_returns_404(client):
     response = client.post("/f/does-not-exist", {"name": "Jane"})
 
     assert response.status_code == 404
-    assert response.json() == {"ok": False, "error": "not_found"}
+    body = response.json()
+    assert body["ok"] is False
+    assert body["error"] == "not_found"
 
 
 def test_inactive_form_returns_404(client):
@@ -157,7 +161,9 @@ def test_disallowed_origin_returns_403_and_stores_nothing(client):
     )
 
     assert response.status_code == 403
-    assert response.json() == {"ok": False, "error": "origin_not_allowed"}
+    body = response.json()
+    assert body["ok"] is False
+    assert body["error"] == "origin_not_allowed"
     assert Submission.objects.count() == 0
 
 
@@ -227,3 +233,308 @@ def test_log_output_contains_no_payload_values(client, caplog):
     assert "TOP-SECRET-MARKER-VALUE" not in caplog.text
     assert str(form.id) in caplog.text
     assert "status=200" in caplog.text
+
+
+# --- HTML-mode redirects (FR-3.5) ------------------------------------------
+
+
+def test_html_mode_success_redirects_to_allowed_redirect_field(client):
+    form = _make_form(allowed_origins=["https://good.example.com"])
+
+    response = client.post(
+        f"/f/{form.token}",
+        {"name": "Jane", "_redirect": "https://good.example.com/thank-you"},
+        HTTP_ACCEPT="text/html",
+    )
+
+    assert response.status_code == 303
+    assert response["Location"] == "https://good.example.com/thank-you"
+
+
+def test_html_mode_redirect_falls_back_to_redirect_url_when_origin_not_allowed(client):
+    form = _make_form(
+        allowed_origins=["https://good.example.com"],
+        redirect_url="https://good.example.com/fallback",
+    )
+
+    response = client.post(
+        f"/f/{form.token}",
+        {"name": "Jane", "_redirect": "https://evil.example.com/x"},
+        HTTP_ACCEPT="text/html",
+    )
+
+    assert response.status_code == 303
+    assert response["Location"] == "https://good.example.com/fallback"
+
+
+def test_html_mode_redirect_ignored_when_allow_list_empty(client):
+    form = _make_form(allowed_origins=[], redirect_url="https://good.example.com/fallback")
+
+    response = client.post(
+        f"/f/{form.token}",
+        {"name": "Jane", "_redirect": "https://good.example.com/x"},
+        HTTP_ACCEPT="text/html",
+    )
+
+    assert response.status_code == 303
+    assert response["Location"] == "https://good.example.com/fallback"
+
+
+def test_html_mode_javascript_redirect_ignored(client):
+    form = _make_form(
+        allowed_origins=["https://good.example.com"],
+        redirect_url="https://good.example.com/fallback",
+    )
+
+    response = client.post(
+        f"/f/{form.token}",
+        {"name": "Jane", "_redirect": "javascript:alert(1)"},
+        HTTP_ACCEPT="text/html",
+    )
+
+    assert response.status_code == 303
+    assert response["Location"] == "https://good.example.com/fallback"
+
+
+def test_html_mode_falls_back_to_thanks_page(client):
+    form = _make_form(allowed_origins=[], redirect_url=None)
+
+    response = client.post(f"/f/{form.token}", {"name": "Jane"}, HTTP_ACCEPT="text/html")
+
+    assert response.status_code == 303
+    assert response["Location"] == "/thanks"
+
+
+def test_thanks_page_renders_with_noindex(client):
+    response = client.get("/thanks")
+
+    assert response.status_code == 200
+    assert 'name="robots" content="noindex"' in response.content.decode()
+
+
+# --- Error format in both response modes (FR-3.6) --------------------------
+
+
+def test_not_found_error_json_mode(client):
+    response = client.post("/f/does-not-exist", {"name": "Jane"})
+
+    assert response.status_code == 404
+    assert response.json() == {
+        "ok": False,
+        "error": "not_found",
+        "message": "This form does not exist or is no longer accepting submissions.",
+    }
+
+
+def test_not_found_error_html_mode(client):
+    response = client.post("/f/does-not-exist", {"name": "Jane"}, HTTP_ACCEPT="text/html")
+
+    assert response.status_code == 404
+    assert response["Content-Type"].startswith("text/html")
+    assert "does not exist" in response.content.decode()
+
+
+def test_method_not_allowed_error_json_mode(client):
+    form = _make_form()
+
+    response = client.get(f"/f/{form.token}")
+
+    assert response.status_code == 405
+    assert response.json()["error"] == "method_not_allowed"
+    assert response["Allow"] == "POST, OPTIONS"
+
+
+def test_method_not_allowed_error_html_mode(client):
+    form = _make_form()
+
+    response = client.get(f"/f/{form.token}", HTTP_ACCEPT="text/html")
+
+    assert response.status_code == 405
+    assert response["Content-Type"].startswith("text/html")
+
+
+def test_origin_not_allowed_error_json_mode(client):
+    form = _make_form(allowed_origins=["https://good.example.com"])
+
+    response = client.post(
+        f"/f/{form.token}", {"name": "Jane"}, HTTP_ORIGIN="https://evil.example.com"
+    )
+
+    assert response.status_code == 403
+    assert response.json()["error"] == "origin_not_allowed"
+    assert "Access-Control-Allow-Origin" not in response
+
+
+def test_origin_not_allowed_error_html_mode(client):
+    form = _make_form(allowed_origins=["https://good.example.com"])
+
+    response = client.post(
+        f"/f/{form.token}",
+        {"name": "Jane"},
+        HTTP_ORIGIN="https://evil.example.com",
+        HTTP_ACCEPT="text/html",
+    )
+
+    assert response.status_code == 403
+    assert response["Content-Type"].startswith("text/html")
+
+
+def test_unsupported_media_type_error_json_mode(client):
+    form = _make_form()
+
+    response = client.post(f"/f/{form.token}", data="hello", content_type="text/plain")
+
+    assert response.status_code == 415
+    assert response.json()["error"] == "unsupported_media_type"
+
+
+def test_unsupported_media_type_error_html_mode(client):
+    form = _make_form()
+
+    response = client.post(
+        f"/f/{form.token}", data="hello", content_type="text/plain", HTTP_ACCEPT="text/html"
+    )
+
+    assert response.status_code == 415
+    assert response["Content-Type"].startswith("text/html")
+
+
+def test_invalid_payload_error_json_mode(client):
+    form = _make_form()
+
+    response = client.post(
+        f"/f/{form.token}",
+        data=json.dumps({"name": "Jane", "address": {"city": "NYC"}}),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 422
+    assert response.json()["error"] == "invalid_payload"
+
+
+def test_invalid_payload_error_html_mode(client):
+    form = _make_form()
+
+    response = client.post(
+        f"/f/{form.token}",
+        {"name": "Jane", "attachment": SimpleUploadedFile("a.txt", b"content")},
+        HTTP_ACCEPT="text/html",
+    )
+
+    assert response.status_code == 422
+    assert response["Content-Type"].startswith("text/html")
+
+
+def test_payload_too_large_from_content_length_json_mode(client):
+    form = _make_form()
+
+    response = client.post(
+        f"/f/{form.token}",
+        data=json.dumps({"name": "Jane"}),
+        content_type="application/json",
+        CONTENT_LENGTH=str(10 * 1024 * 1024),
+    )
+
+    assert response.status_code == 413
+    assert response.json()["error"] == "payload_too_large"
+    assert Submission.objects.count() == 0
+
+
+def test_payload_too_large_from_content_length_html_mode(client):
+    form = _make_form()
+
+    response = client.post(
+        f"/f/{form.token}",
+        {"name": "Jane"},
+        HTTP_ACCEPT="text/html",
+        CONTENT_LENGTH=str(10 * 1024 * 1024),
+    )
+
+    assert response.status_code == 413
+    assert response["Content-Type"].startswith("text/html")
+
+
+def test_payload_too_large_in_parse_json_mode(client, settings):
+    settings.INGEST_MAX_FIELDS = 1
+    form = _make_form()
+
+    response = client.post(f"/f/{form.token}", {"a": "1", "b": "2"})
+
+    assert response.status_code == 413
+    assert response.json()["error"] == "payload_too_large"
+
+
+# --- CORS on error responses (FR-3.6) ---------------------------------------
+
+
+def test_in_parse_payload_too_large_carries_acao_when_origin_allowed(client, settings):
+    settings.INGEST_MAX_FIELDS = 1
+    form = _make_form(allowed_origins=["https://good.example.com"])
+
+    response = client.post(
+        f"/f/{form.token}", {"a": "1", "b": "2"}, HTTP_ORIGIN="https://good.example.com"
+    )
+
+    assert response.status_code == 413
+    assert response["Access-Control-Allow-Origin"] == "https://good.example.com"
+
+
+def test_unsupported_media_type_carries_acao_when_origin_allowed(client):
+    form = _make_form(allowed_origins=["https://good.example.com"])
+
+    response = client.post(
+        f"/f/{form.token}",
+        data="hello",
+        content_type="text/plain",
+        HTTP_ORIGIN="https://good.example.com",
+    )
+
+    assert response.status_code == 415
+    assert response["Access-Control-Allow-Origin"] == "https://good.example.com"
+
+
+def test_invalid_payload_carries_acao_when_origin_allowed(client):
+    form = _make_form(allowed_origins=["https://good.example.com"])
+
+    response = client.post(
+        f"/f/{form.token}",
+        data=json.dumps({"name": "Jane", "address": {"city": "NYC"}}),
+        content_type="application/json",
+        HTTP_ORIGIN="https://good.example.com",
+    )
+
+    assert response.status_code == 422
+    assert response["Access-Control-Allow-Origin"] == "https://good.example.com"
+
+
+def test_pre_lookup_payload_too_large_never_carries_acao(client):
+    form = _make_form(allowed_origins=["https://good.example.com"])
+
+    response = client.post(
+        f"/f/{form.token}",
+        data=json.dumps({"name": "Jane"}),
+        content_type="application/json",
+        HTTP_ORIGIN="https://good.example.com",
+        CONTENT_LENGTH=str(10 * 1024 * 1024),
+    )
+
+    assert response.status_code == 413
+    assert "Access-Control-Allow-Origin" not in response
+
+
+def test_not_found_never_carries_acao(client):
+    response = client.post(
+        "/f/does-not-exist", {"name": "Jane"}, HTTP_ORIGIN="https://good.example.com"
+    )
+
+    assert response.status_code == 404
+    assert "Access-Control-Allow-Origin" not in response
+
+
+def test_method_not_allowed_never_carries_acao(client):
+    form = _make_form()
+
+    response = client.get(f"/f/{form.token}", HTTP_ORIGIN="https://good.example.com")
+
+    assert response.status_code == 405
+    assert "Access-Control-Allow-Origin" not in response
