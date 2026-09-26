@@ -45,7 +45,7 @@ ROOT_URLCONF = "config.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -65,6 +65,12 @@ DATABASES = {
 }
 
 AUTH_USER_MODEL = "accounts.User"
+
+LOGIN_URL = "accounts:login"
+LOGIN_REDIRECT_URL = "dashboard:home"
+LOGOUT_REDIRECT_URL = "accounts:login"
+
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="EasyForms <noreply@easyforms.example>")
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
@@ -89,6 +95,17 @@ RQ_QUEUES = {
     "default": {
         "URL": REDIS_URL,
     },
+}
+
+# Shared with RQ's Redis instance; KEY_PREFIX keeps our keys distinct from rq:* keys.
+# Used for the resend-verification-email throttle (must be shared across gunicorn
+# workers, so LocMemCache would not do).
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": REDIS_URL,
+        "KEY_PREFIX": "easyforms",
+    }
 }
 
 # HMAC key for hashing submitter IPs before storage (CLAUDE.md rule 5)

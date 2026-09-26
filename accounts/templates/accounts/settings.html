@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}Settings — EasyForms{% endblock %}
+
+{% block content %}
+  <h1>Settings</h1>
+  <dl>
+    <dt>Email</dt>
+    <dd>{{ user.email }}</dd>
+
+    <dt>Verified</dt>
+    <dd>{{ user.is_verified|yesno:"Yes,No" }}</dd>
+
+    <dt>Plan</dt>
+    <dd>{{ account.plan }}</dd>
+  </dl>
+  <p>Usage figures are coming Day 7.</p>
+{% endblock %}

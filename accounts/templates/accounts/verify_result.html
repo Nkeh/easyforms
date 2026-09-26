@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Email verification — EasyForms{% endblock %}
+
+{% block content %}
+  {% if success %}
+    <h1>Email verified</h1>
+    <p>Thanks — your email address is now verified.</p>
+    <p><a href="{% url 'dashboard:home' %}">Go to your dashboard</a></p>
+  {% else %}
+    <h1>Verification link invalid</h1>
+    <p>This verification link is invalid or has expired.</p>
+    {% if user.is_authenticated and not user.is_verified %}
+      <form method="post" action="{% url 'accounts:resend_verification' %}">
+        {% csrf_token %}
+        <button type="submit">Send a new verification email</button>
+      </form>
+    {% else %}
+      <p><a href="{% url 'accounts:login' %}">Log in</a> to request a new one.</p>
+    {% endif %}
+  {% endif %}
+{% endblock %}

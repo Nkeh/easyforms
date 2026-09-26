@@ -84,7 +84,7 @@ docker compose run --rm web python manage.py makemigrations / migrate
   commit message(s).
 
 ## Progress
-- [ ] Day 1 — Compose skeleton, settings, custom user stub, healthz, tooling
+- [*] Day 1 — Compose skeleton, settings, custom user stub, healthz, tooling
 - [ ] Day 2 — Data model + migrations + admin
 - [ ] Day 3 — Auth flows
 - [ ] Day 4 — Form CRUD + token + snippet
