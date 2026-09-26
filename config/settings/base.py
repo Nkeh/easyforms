@@ -114,3 +114,8 @@ CACHES = {
 
 # HMAC key for hashing submitter IPs before storage (CLAUDE.md rule 5)
 IP_HASH_SECRET = env("IP_HASH_SECRET")
+
+# Number of trusted reverse-proxy hops in front of the app. 0 = trust
+# REMOTE_ADDR directly; N > 0 = take the Nth address from the right of
+# X-Forwarded-For (client-supplied entries beyond that are never trusted).
+TRUSTED_PROXY_COUNT = env.int("TRUSTED_PROXY_COUNT", default=0)
