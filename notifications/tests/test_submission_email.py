@@ -127,11 +127,13 @@ def test_recipients_are_exactly_the_list_passed_in():
     assert mail.outbox[0].to == ["verified@example.com"]
 
 
-def test_form_url_uses_public_base_url_and_form_detail_route(settings):
+def test_form_url_uses_public_base_url_and_submission_detail_route(settings):
     settings.PUBLIC_BASE_URL = "http://example.test"
     submission = _make_submission()
 
     send_submission_email(submission, ["owner@example.com"])
 
-    expected = "http://example.test" + reverse("forms_app:detail", args=[submission.form.id])
+    expected = "http://example.test" + reverse(
+        "dashboard:submission_detail", args=[submission.form.id, submission.id]
+    )
     assert expected in mail.outbox[0].body

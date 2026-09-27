@@ -3,23 +3,22 @@
 {% block title %}New form — EasyForms{% endblock %}
 
 {% block content %}
-  <h1>New form</h1>
-  <form method="post" novalidate>
-    {% csrf_token %}
-    {% if form.non_field_errors %}
-      <ul>{% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}</ul>
-    {% endif %}
-    {% for field in form %}
-      <p>
-        {{ field.label_tag }}
-        {{ field }}
-        {% if field.errors %}
-          <ul id="{{ field.auto_id }}_errors">
-            {% for error in field.errors %}<li>{{ error }}</li>{% endfor %}
-          </ul>
-        {% endif %}
-      </p>
-    {% endfor %}
-    <button type="submit">Create form</button>
-  </form>
+  <div class="mx-auto max-w-sm">
+    <h1 class="text-2xl font-semibold text-slate-900">New form</h1>
+    <form method="post" novalidate class="mt-6">
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        <ul class="mb-4 space-y-0.5 rounded-md border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800">
+          {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
+        </ul>
+      {% endif %}
+      {% include "_form_fields.html" %}
+      <button type="submit"
+              class="w-full rounded-md bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700
+                     focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500
+                     focus-visible:ring-offset-2">
+        Create form
+      </button>
+    </form>
+  </div>
 {% endblock %}

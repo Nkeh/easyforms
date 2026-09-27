@@ -4,19 +4,37 @@
 
 {% block content %}
   {% if success %}
-    <h1>Email verified</h1>
-    <p>Thanks — your email address is now verified.</p>
-    <p><a href="{% url 'dashboard:home' %}">Go to your dashboard</a></p>
+    <h1 class="text-2xl font-semibold text-slate-900">Email verified</h1>
+    <p class="mt-2 text-slate-600">Thanks — your email address is now verified.</p>
+    <p class="mt-4">
+      <a href="{% url 'dashboard:home' %}"
+         class="rounded font-medium text-blue-600 hover:text-blue-700 focus-visible:outline-none
+                focus-visible:ring-2 focus-visible:ring-blue-500">
+        Go to your dashboard
+      </a>
+    </p>
   {% else %}
-    <h1>Verification link invalid</h1>
-    <p>This verification link is invalid or has expired.</p>
+    <h1 class="text-2xl font-semibold text-slate-900">Verification link invalid</h1>
+    <p class="mt-2 text-slate-600">This verification link is invalid or has expired.</p>
     {% if user.is_authenticated and not user.is_verified %}
-      <form method="post" action="{% url 'accounts:resend_verification' %}">
+      <form method="post" action="{% url 'accounts:resend_verification' %}" class="mt-4">
         {% csrf_token %}
-        <button type="submit">Send a new verification email</button>
+        <button type="submit"
+                class="rounded-md bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700
+                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500
+                       focus-visible:ring-offset-2">
+          Send a new verification email
+        </button>
       </form>
     {% else %}
-      <p><a href="{% url 'accounts:login' %}">Log in</a> to request a new one.</p>
+      <p class="mt-4">
+        <a href="{% url 'accounts:login' %}"
+           class="rounded font-medium text-blue-600 hover:text-blue-700 focus-visible:outline-none
+                  focus-visible:ring-2 focus-visible:ring-blue-500">
+          Log in
+        </a>
+        to request a new one.
+      </p>
     {% endif %}
   {% endif %}
 {% endblock %}

@@ -40,6 +40,25 @@ services:
       - "1025:1025"
       - "8025:8025"
 
+  tailwind:
+    build:
+      context: .
+      target: tailwind-cli
+    entrypoint: ["tailwindcss"]
+    command:
+      [
+        "-c", "tailwind.config.js",
+        "-i", "static_src/css/input.css",
+        "-o", "static/css/app.css",
+        "--watch",
+        "--poll",
+      ]
+    working_dir: /app
+    stdin_open: true
+    tty: true
+    volumes:
+      - .:/app
+
   db:
     image: postgres:16
     environment:

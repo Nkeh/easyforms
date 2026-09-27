@@ -3,64 +3,99 @@
 {% block title %}{{ form_obj.name }} — EasyForms{% endblock %}
 
 {% block content %}
-  <h1>{{ form_obj.name }}</h1>
+  <div class="flex items-center justify-between">
+    <h1 class="text-2xl font-semibold text-slate-900">{{ form_obj.name }}</h1>
+    <a href="{% url 'dashboard:submission_list' pk=form_obj.pk %}"
+       class="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700
+              hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+      View submissions
+    </a>
+  </div>
 
-  <dl>
-    <dt>Token</dt>
-    <dd><code>{{ form_obj.token }}</code></dd>
-
-    <dt>Endpoint URL</dt>
-    <dd><code>{{ form_obj.endpoint_url }}</code></dd>
-
-    <dt>Status</dt>
-    <dd>{{ form_obj.is_active|yesno:"Active,Inactive" }}</dd>
+  <dl class="mt-6 divide-y divide-slate-200 rounded-lg border border-slate-200 bg-white shadow-sm">
+    <div class="grid grid-cols-3 gap-4 px-4 py-3">
+      <dt class="text-sm font-medium text-slate-500">Token</dt>
+      <dd class="col-span-2 text-sm text-slate-900"><code>{{ form_obj.token }}</code></dd>
+    </div>
+    <div class="grid grid-cols-3 gap-4 px-4 py-3">
+      <dt class="text-sm font-medium text-slate-500">Endpoint URL</dt>
+      <dd class="col-span-2 text-sm text-slate-900"><code>{{ form_obj.endpoint_url }}</code></dd>
+    </div>
+    <div class="grid grid-cols-3 gap-4 px-4 py-3">
+      <dt class="text-sm font-medium text-slate-500">Status</dt>
+      <dd class="col-span-2 text-sm text-slate-900">
+        {% if form_obj.is_active %}
+          <span class="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">Active</span>
+        {% else %}
+          <span class="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">Inactive</span>
+        {% endif %}
+      </dd>
+    </div>
   </dl>
 
-  {% if form_obj.is_active %}
-    <form method="post" action="{% url 'forms_app:deactivate' pk=form_obj.pk %}">
-      {% csrf_token %}
-      <button type="submit">Deactivate</button>
-    </form>
-  {% else %}
-    <form method="post" action="{% url 'forms_app:activate' pk=form_obj.pk %}">
-      {% csrf_token %}
-      <button type="submit">Reactivate</button>
-    </form>
-  {% endif %}
+  <div class="mt-4">
+    {% if form_obj.is_active %}
+      <form method="post" action="{% url 'forms_app:deactivate' pk=form_obj.pk %}">
+        {% csrf_token %}
+        <button type="submit"
+                class="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium
+                       text-slate-700 hover:bg-slate-50 focus-visible:outline-none
+                       focus-visible:ring-2 focus-visible:ring-blue-500">
+          Deactivate
+        </button>
+      </form>
+    {% else %}
+      <form method="post" action="{% url 'forms_app:activate' pk=form_obj.pk %}">
+        {% csrf_token %}
+        <button type="submit"
+                class="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700
+                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500
+                       focus-visible:ring-offset-2">
+          Reactivate
+        </button>
+      </form>
+    {% endif %}
+  </div>
 
   {% if not form_obj.allowed_origins %}
-    <p class="warning">
+    <p class="mt-4 rounded-md border border-yellow-200 bg-yellow-50 px-4 py-2 text-sm text-yellow-800">
       Any website can submit to this form. Add allowed origins to restrict it.
     </p>
   {% endif %}
 
-  <h2>Settings</h2>
-  <form method="post" novalidate>
+  <h2 class="mt-8 text-lg font-semibold text-slate-900">Settings</h2>
+  <form method="post" novalidate class="mt-4 max-w-lg">
     {% csrf_token %}
-    {% for field in edit_form %}
-      <p>
-        {{ field.label_tag }}
-        {{ field }}
-        {% if field.help_text %}<br><small>{{ field.help_text }}</small>{% endif %}
-        {% if field.errors %}
-          <ul id="{{ field.auto_id }}_errors">
-            {% for error in field.errors %}<li>{{ error }}</li>{% endfor %}
-          </ul>
-        {% endif %}
-      </p>
-    {% endfor %}
-    <button type="submit">Save</button>
+    {% include "_form_fields.html" with form=edit_form %}
+    <button type="submit"
+            class="rounded-md bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700
+                   focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500
+                   focus-visible:ring-offset-2">
+      Save
+    </button>
   </form>
 
-  <h2>Embed snippet</h2>
+  <h2 class="mt-8 text-lg font-semibold text-slate-900">Embed snippet</h2>
 
-  <h3>Plain HTML form</h3>
-  <pre id="html-snippet">{{ html_snippet }}</pre>
-  <button type="button" onclick="easyformsCopy('html-snippet')">Copy</button>
+  <h3 class="mt-4 text-sm font-semibold text-slate-700">Plain HTML form</h3>
+  <pre id="html-snippet"
+       class="mt-2 overflow-x-auto rounded-md border border-slate-200 bg-slate-900 p-4 text-xs text-slate-100">{{ html_snippet }}</pre>
+  <button type="button" onclick="easyformsCopy('html-snippet')"
+          class="mt-2 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium
+                 text-slate-700 hover:bg-slate-50 focus-visible:outline-none
+                 focus-visible:ring-2 focus-visible:ring-blue-500">
+    Copy
+  </button>
 
-  <h3>Fetch (JSON)</h3>
-  <pre id="fetch-snippet">{{ fetch_snippet }}</pre>
-  <button type="button" onclick="easyformsCopy('fetch-snippet')">Copy</button>
+  <h3 class="mt-6 text-sm font-semibold text-slate-700">Fetch (JSON)</h3>
+  <pre id="fetch-snippet"
+       class="mt-2 overflow-x-auto rounded-md border border-slate-200 bg-slate-900 p-4 text-xs text-slate-100">{{ fetch_snippet }}</pre>
+  <button type="button" onclick="easyformsCopy('fetch-snippet')"
+          class="mt-2 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium
+                 text-slate-700 hover:bg-slate-50 focus-visible:outline-none
+                 focus-visible:ring-2 focus-visible:ring-blue-500">
+    Copy
+  </button>
 
   <script>
     function easyformsCopy(id) {

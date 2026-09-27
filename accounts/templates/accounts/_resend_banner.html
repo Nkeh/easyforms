@@ -1,7 +1,11 @@
-<div class="banner">
+<div class="mb-4 flex items-center justify-between rounded-md border border-yellow-200 bg-yellow-50 px-4 py-2 text-sm text-yellow-800">
   <p>Please verify your email address.</p>
   <form method="post" action="{% url 'accounts:resend_verification' %}">
     {% csrf_token %}
-    <button type="submit">Resend verification email</button>
+    <button type="submit"
+            class="rounded font-medium text-yellow-900 underline hover:text-yellow-950
+                   focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+      Resend verification email
+    </button>
   </form>
 </div>

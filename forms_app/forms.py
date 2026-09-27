@@ -3,6 +3,7 @@ from urllib.parse import urlsplit
 from django import forms
 from django.core.exceptions import ValidationError
 
+from core.forms import TailwindStyledForm
 from forms_app.models import Form
 
 
@@ -33,13 +34,13 @@ def _normalize_origin(raw_line: str, line_no: int) -> str:
     return f"{parsed.scheme}://{parsed.netloc}"
 
 
-class FormCreateForm(forms.ModelForm):
+class FormCreateForm(TailwindStyledForm, forms.ModelForm):
     class Meta:
         model = Form
         fields = ["name"]
 
 
-class FormEditForm(forms.ModelForm):
+class FormEditForm(TailwindStyledForm, forms.ModelForm):
     allowed_origins = forms.CharField(
         required=False,
         widget=forms.Textarea(attrs={"rows": 5}),

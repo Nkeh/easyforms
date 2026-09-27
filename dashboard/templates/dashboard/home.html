@@ -3,44 +3,85 @@
 {% block title %}Dashboard — EasyForms{% endblock %}
 
 {% block content %}
-  <h1>Dashboard</h1>
+  <h1 class="text-2xl font-semibold text-slate-900">Dashboard</h1>
 
-  <p>{{ forms_limit.used }} / {{ forms_limit.limit }} forms used</p>
+  <div class="mt-4 flex flex-wrap gap-4 text-sm text-slate-600">
+    <p>{{ forms_limit.used }} / {{ forms_limit.limit }} forms used</p>
+    <p>{{ submissions_limit.used }} / {{ submissions_limit.limit }} submissions this month</p>
+  </div>
 
   {% if forms %}
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Status</th>
-          <th>Endpoint</th>
-          <th>Created</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for form_obj in forms %}
+    <div class="mt-6 overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
+      <table class="min-w-full divide-y divide-slate-200 text-sm">
+        <thead class="bg-slate-50">
           <tr>
-            <td><a href="{% url 'forms_app:detail' pk=form_obj.pk %}">{{ form_obj.name }}</a></td>
-            <td>{{ form_obj.is_active|yesno:"Active,Inactive" }}</td>
-            <td><code>{{ form_obj.endpoint_url }}</code></td>
-            <td>{{ form_obj.created_at|date:"Y-m-d" }}</td>
-            <td><a href="{% url 'forms_app:detail' pk=form_obj.pk %}">Manage</a></td>
+            <th scope="col" class="px-4 py-2 text-left font-medium text-slate-500">Name</th>
+            <th scope="col" class="px-4 py-2 text-left font-medium text-slate-500">Status</th>
+            <th scope="col" class="px-4 py-2 text-left font-medium text-slate-500">Ham</th>
+            <th scope="col" class="px-4 py-2 text-left font-medium text-slate-500">Spam</th>
+            <th scope="col" class="px-4 py-2 text-left font-medium text-slate-500">Ham this month</th>
+            <th scope="col" class="px-4 py-2 text-left font-medium text-slate-500">Endpoint</th>
+            <th scope="col" class="px-4 py-2 text-left font-medium text-slate-500">Created</th>
+            <th scope="col" class="px-4 py-2"><span class="sr-only">Actions</span></th>
           </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+        </thead>
+        <tbody class="divide-y divide-slate-200">
+          {% for form_obj in forms %}
+            <tr>
+              <td class="px-4 py-2">
+                <a href="{% url 'forms_app:detail' pk=form_obj.pk %}"
+                   class="rounded font-medium text-blue-600 hover:text-blue-700
+                          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+                  {{ form_obj.name }}
+                </a>
+              </td>
+              <td class="px-4 py-2">
+                {% if form_obj.is_active %}
+                  <span class="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">Active</span>
+                {% else %}
+                  <span class="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">Inactive</span>
+                {% endif %}
+              </td>
+              <td class="px-4 py-2 text-slate-700">{{ form_obj.ham_count }}</td>
+              <td class="px-4 py-2 text-slate-700">{{ form_obj.spam_count }}</td>
+              <td class="px-4 py-2 text-slate-700">{{ form_obj.ham_this_month }}</td>
+              <td class="px-4 py-2 text-slate-500"><code class="text-xs">{{ form_obj.endpoint_url }}</code></td>
+              <td class="px-4 py-2 text-slate-500">{{ form_obj.created_at|date:"Y-m-d" }}</td>
+              <td class="px-4 py-2 text-right">
+                <a href="{% url 'dashboard:submission_list' pk=form_obj.pk %}"
+                   class="rounded font-medium text-blue-600 hover:text-blue-700
+                          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+                  Submissions
+                </a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
     {% if forms_limit.allowed %}
-      <p><a href="{% url 'forms_app:create' %}">+ New form</a></p>
+      <p class="mt-4">
+        <a href="{% url 'forms_app:create' %}"
+           class="rounded font-medium text-blue-600 hover:text-blue-700 focus-visible:outline-none
+                  focus-visible:ring-2 focus-visible:ring-blue-500">
+          + New form
+        </a>
+      </p>
     {% else %}
-      <p>You've reached your plan's limit of {{ forms_limit.limit }} active forms.</p>
+      <p class="mt-4 text-slate-600">You've reached your plan's limit of {{ forms_limit.limit }} active forms.</p>
     {% endif %}
   {% else %}
-    <p>You haven't created any forms yet.</p>
+    <p class="mt-6 text-slate-600">You haven't created any forms yet.</p>
     {% if forms_limit.allowed %}
-      <p><a href="{% url 'forms_app:create' %}">Create your first form</a></p>
+      <p class="mt-2">
+        <a href="{% url 'forms_app:create' %}"
+           class="rounded font-medium text-blue-600 hover:text-blue-700 focus-visible:outline-none
+                  focus-visible:ring-2 focus-visible:ring-blue-500">
+          Create your first form
+        </a>
+      </p>
     {% else %}
-      <p>You've reached your plan's limit of {{ forms_limit.limit }} active forms.</p>
+      <p class="mt-2 text-slate-600">You've reached your plan's limit of {{ forms_limit.limit }} active forms.</p>
     {% endif %}
   {% endif %}
 {% endblock %}

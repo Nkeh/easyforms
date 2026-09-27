@@ -50,7 +50,7 @@ def send_submission_email(submission, recipients: list[str]) -> None:
         "form": form,
         "fields": _submission_fields(submission.payload),
         "created_at": submission.created_at,
-        "form_url": _form_url(form),
+        "form_url": _submission_url(submission),
     }
     text_body = render_to_string("notifications/email/submission_notification.txt", context)
     html_body = render_to_string("notifications/email/submission_notification.html", context)
@@ -99,6 +99,7 @@ def _reply_to(payload: dict) -> str | None:
     return None
 
 
-def _form_url(form) -> str:
-    # TODO(Day 11): point at the submission detail page once it exists.
-    return settings.PUBLIC_BASE_URL + reverse("forms_app:detail", args=[form.id])
+def _submission_url(submission) -> str:
+    return settings.PUBLIC_BASE_URL + reverse(
+        "dashboard:submission_detail", args=[submission.form_id, submission.id]
+    )

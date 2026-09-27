@@ -1,14 +1,15 @@
 from django import forms
-from django.contrib.auth.forms import AuthenticationForm, PasswordResetForm
+from django.contrib.auth.forms import AuthenticationForm, PasswordResetForm, SetPasswordForm
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.template import loader
 
 from accounts.models import User
+from core.forms import TailwindStyledForm
 from notifications.email import send_transactional
 
 
-class SignupForm(forms.Form):
+class SignupForm(TailwindStyledForm, forms.Form):
     email = forms.EmailField(label="Email")
     password = forms.CharField(label="Password", widget=forms.PasswordInput, strip=False)
 
@@ -24,14 +25,18 @@ class SignupForm(forms.Form):
         return password
 
 
-class EmailAuthenticationForm(AuthenticationForm):
+class EmailAuthenticationForm(TailwindStyledForm, AuthenticationForm):
     username = forms.EmailField(
         label="Email",
         widget=forms.EmailInput(attrs={"autofocus": True, "autocomplete": "email"}),
     )
 
 
-class TransactionalPasswordResetForm(PasswordResetForm):
+class StyledSetPasswordForm(TailwindStyledForm, SetPasswordForm):
+    pass
+
+
+class TransactionalPasswordResetForm(TailwindStyledForm, PasswordResetForm):
     def send_mail(
         self,
         subject_template_name,

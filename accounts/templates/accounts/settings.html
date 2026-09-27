@@ -3,21 +3,29 @@
 {% block title %}Settings — EasyForms{% endblock %}
 
 {% block content %}
-  <h1>Settings</h1>
-  <dl>
-    <dt>Email</dt>
-    <dd>{{ user.email }}</dd>
-
-    <dt>Verified</dt>
-    <dd>{{ user.is_verified|yesno:"Yes,No" }}</dd>
-
-    <dt>Plan</dt>
-    <dd>{{ account.plan }}</dd>
-
-    <dt>Active forms</dt>
-    <dd>{{ forms_limit.used }} / {{ forms_limit.limit }}</dd>
-
-    <dt>Submissions this month</dt>
-    <dd>{{ submissions_limit.used }} / {{ submissions_limit.limit }}</dd>
+  <h1 class="text-2xl font-semibold text-slate-900">Settings</h1>
+  <dl class="mt-6 divide-y divide-slate-200 rounded-lg border border-slate-200 bg-white shadow-sm">
+    <div class="grid grid-cols-3 gap-4 px-4 py-3">
+      <dt class="text-sm font-medium text-slate-500">Email</dt>
+      <dd class="col-span-2 text-sm text-slate-900">{{ user.email }}</dd>
+    </div>
+    <div class="grid grid-cols-3 gap-4 px-4 py-3">
+      <dt class="text-sm font-medium text-slate-500">Verified</dt>
+      <dd class="col-span-2 text-sm text-slate-900">{{ user.is_verified|yesno:"Yes,No" }}</dd>
+    </div>
+    <div class="grid grid-cols-3 gap-4 px-4 py-3">
+      <dt class="text-sm font-medium text-slate-500">Plan</dt>
+      <dd class="col-span-2 text-sm text-slate-900">{{ account.plan }}</dd>
+    </div>
+    <div class="grid grid-cols-3 gap-4 px-4 py-3">
+      <dt class="text-sm font-medium text-slate-500">Active forms</dt>
+      <dd class="col-span-2 text-sm text-slate-900">{{ forms_limit.used }} / {{ forms_limit.limit }}</dd>
+    </div>
+    <div class="grid grid-cols-3 gap-4 px-4 py-3">
+      <dt class="text-sm font-medium text-slate-500">Submissions this month</dt>
+      <dd class="col-span-2 text-sm text-slate-900">
+        {{ submissions_limit.used }} / {{ submissions_limit.limit }}
+      </dd>
+    </div>
   </dl>
 {% endblock %}

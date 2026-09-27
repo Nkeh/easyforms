@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Delete submission — EasyForms{% endblock %}
+
+{% block content %}
+  <h1 class="text-2xl font-semibold text-slate-900">Delete this submission?</h1>
+  <p class="mt-2 text-slate-600">
+    This will permanently remove the submission received on
+    {{ submission.created_at|date:"Y-m-d H:i" }} for <strong>{{ form_obj.name }}</strong>.
+    This cannot be undone.
+  </p>
+
+  <div class="mt-6 flex gap-3">
+    <form method="post">
+      {% csrf_token %}
+      <button type="submit"
+              class="rounded-md bg-red-600 px-4 py-2 font-medium text-white hover:bg-red-700
+                     focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500
+                     focus-visible:ring-offset-2">
+        Delete permanently
+      </button>
+    </form>
+    <a href="{% url 'dashboard:submission_detail' pk=form_obj.pk submission_pk=submission.pk %}"
+       class="rounded-md border border-slate-300 bg-white px-4 py-2 font-medium text-slate-700
+              hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+      Cancel
+    </a>
+  </div>
+{% endblock %}
