@@ -21,6 +21,28 @@ def test_signup_creates_account_and_user_and_logs_in(client):
     assert len(mail.outbox) == 1
 
 
+def test_signup_verification_email_is_sent_via_the_emails_queue_not_inline(client, monkeypatch):
+    from notifications.tasks import send_transactional_job
+
+    queue_names = []
+    enqueued_funcs = []
+
+    class _RecordingQueue:
+        def enqueue(self, func, *args, **kwargs):
+            enqueued_funcs.append(func)
+
+    def _get_queue(name):
+        queue_names.append(name)
+        return _RecordingQueue()
+
+    monkeypatch.setattr("notifications.tasks.django_rq.get_queue", _get_queue)
+
+    client.post("/signup", {"email": "new@example.com", "password": "s3cret-pass123"})
+
+    assert queue_names == ["emails"]
+    assert enqueued_funcs == [send_transactional_job]
+
+
 def test_signup_rolls_back_account_and_user_when_save_fails(client, monkeypatch):
     def raise_integrity_error(self, *args, **kwargs):
         raise IntegrityError("boom")

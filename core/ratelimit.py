@@ -4,6 +4,8 @@ from dataclasses import dataclass
 import redis
 from django.conf import settings
 
+from core import bounded_call, circuit_breaker
+
 logger = logging.getLogger("core")
 
 _LUA_HIT = """
@@ -22,7 +24,11 @@ _script = None
 def _get_script():
     global _client, _script
     if _script is None:
-        _client = redis.Redis.from_url(settings.REDIS_URL)
+        _client = redis.Redis.from_url(
+            settings.REDIS_URL,
+            socket_connect_timeout=settings.REDIS_TIMEOUT_SECONDS,
+            socket_timeout=settings.REDIS_TIMEOUT_SECONDS,
+        )
         _script = _client.register_script(_LUA_HIT)
     return _script
 
@@ -35,11 +41,19 @@ class RateResult:
 
 def hit(bucket: str, key: str, limit: int, window_seconds: int) -> RateResult:
     """Fixed-window rate limit: at most `limit` hits per `window_seconds` for
-    this bucket+key. Fails open (allows) if Redis is unreachable (NFR-3)."""
+    this bucket+key. Fails open (allows) if Redis is unreachable (NFR-3), and
+    skips Redis entirely while the shared circuit breaker is open."""
+    if circuit_breaker.is_open():
+        return RateResult(allowed=True, retry_after=None)
+
     redis_key = f"easyforms:rl:{bucket}:{key}"
     try:
-        count, ttl = _get_script()(keys=[redis_key], args=[window_seconds])
-    except redis.RedisError:
+        count, ttl = bounded_call.run_bounded(
+            lambda: _get_script()(keys=[redis_key], args=[window_seconds]),
+            timeout=settings.REDIS_TIMEOUT_SECONDS,
+        )
+    except (redis.RedisError, TimeoutError):
+        circuit_breaker.trip()
         logger.warning("rate limiter unavailable (bucket=%s); failing open", bucket)
         return RateResult(allowed=True, retry_after=None)
 

@@ -48,6 +48,12 @@ class Submission(models.Model):
         HAM = "ham", "Ham"
         SPAM = "spam", "Spam"
 
+    class NotificationStatus(models.TextChoices):
+        PENDING = "pending", "Pending"
+        SENT = "sent", "Sent"
+        SKIPPED = "skipped", "Skipped"
+        FAILED = "failed", "Failed"
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     form = models.ForeignKey(Form, on_delete=models.CASCADE, related_name="submissions")
     payload = models.JSONField()
@@ -66,12 +72,21 @@ class Submission(models.Model):
         blank=True,
         related_name="submissions",
     )
+    # skipped = spam, or ham with no verified account user at store time
+    # (FR-1.2) — a skip is permanent, never picked up later.
+    notification_status = models.CharField(
+        max_length=10,
+        choices=NotificationStatus.choices,
+        default=NotificationStatus.PENDING,
+    )
+    notified_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         indexes = [
             models.Index(fields=["form", "-created_at"]),
             models.Index(fields=["form", "status", "-created_at"]),
+            models.Index(fields=["notification_status", "created_at"]),
         ]
 
     def __str__(self):

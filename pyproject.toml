@@ -12,6 +12,7 @@ dependencies = [
     "gunicorn>=23.0",
     "scikit-learn>=1.9,<1.10",
     "boto3>=1.43,<1.44",
+    "django-anymail>=11.0,<12",
 ]
 
 [dependency-groups]

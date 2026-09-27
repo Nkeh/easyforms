@@ -1,0 +1,14 @@
+<p>New submission for <strong>{{ form.name }}</strong></p>
+
+<table>
+{% for label, value in fields %}
+  <tr>
+    <td><strong>{{ label }}</strong></td>
+    <td>{{ value|linebreaksbr }}</td>
+  </tr>
+{% endfor %}
+</table>
+
+<p>Submitted: {{ created_at }}</p>
+
+<p><a href="{{ form_url }}">View this form</a></p>

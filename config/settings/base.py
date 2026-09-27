@@ -1,4 +1,5 @@
 from pathlib import Path
+from urllib.parse import urlparse
 
 import environ
 from django.core.exceptions import ImproperlyConfigured
@@ -21,6 +22,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django.contrib.postgres",
     "django_rq",
+    "anymail",
     "core",
     "accounts",
     "billing",
@@ -73,6 +75,41 @@ LOGOUT_REDIRECT_URL = "accounts:login"
 
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="EasyForms <noreply@easyforms.example>")
 
+# Email transport (Day 10, FR-5). EMAIL_PROVIDER selects EMAIL_BACKEND:
+# "console"/"smtp" use Django's own backends (dev talks to the mailpit
+# service in docker-compose over smtp); "postmark"/"resend"/"sendgrid" use
+# django-anymail's HTTP-API backends in prod. Validated at boot, like
+# SPAM_MODEL_MODE below, so a typo fails the process once loudly rather than
+# at first send.
+EMAIL_PROVIDER = env("EMAIL_PROVIDER", default="console")
+_EMAIL_BACKENDS = {
+    "console": "django.core.mail.backends.console.EmailBackend",
+    "smtp": "django.core.mail.backends.smtp.EmailBackend",
+    "postmark": "anymail.backends.postmark.EmailBackend",
+    "resend": "anymail.backends.resend.EmailBackend",
+    "sendgrid": "anymail.backends.sendgrid.EmailBackend",
+}
+if EMAIL_PROVIDER not in _EMAIL_BACKENDS:
+    raise ImproperlyConfigured(
+        f"EMAIL_PROVIDER must be one of {sorted(_EMAIL_BACKENDS)}, got {EMAIL_PROVIDER!r}"
+    )
+EMAIL_BACKEND = _EMAIL_BACKENDS[EMAIL_PROVIDER]
+
+# Only read when EMAIL_PROVIDER=smtp (mailpit in dev; a real relay in prod).
+EMAIL_HOST = env("EMAIL_HOST", default="localhost")
+EMAIL_PORT = env.int("EMAIL_PORT", default=1025)
+EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
+EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=False)
+
+# django-anymail API keys. Only the one matching EMAIL_PROVIDER is ever read;
+# dummy/empty values are harmless for the other two providers.
+ANYMAIL = {
+    "POSTMARK_SERVER_TOKEN": env("POSTMARK_SERVER_TOKEN", default=""),
+    "RESEND_API_KEY": env("RESEND_API_KEY", default=""),
+    "SENDGRID_API_KEY": env("SENDGRID_API_KEY", default=""),
+}
+
 # Base URL used to build public endpoint links (e.g. Form.endpoint_url); never
 # derived from the request host so links stay stable regardless of Host header.
 PUBLIC_BASE_URL = env("PUBLIC_BASE_URL", default="http://localhost:8000")
@@ -96,10 +133,39 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # Redis / RQ (async email + webhooks; the ingest path itself never blocks on these)
 REDIS_URL = env("REDIS_URL")
 
-RQ_QUEUES = {
-    "default": {
-        "URL": REDIS_URL,
+# Bounds how long any single Redis call (connect or read/write) can block a
+# request. Every Redis client in the app (core.ratelimit, the RQ connection,
+# the cache backend, /healthz) is configured with this, so a real Redis
+# outage fails fast instead of hanging the ingest path for many seconds
+# (NFR-1). core.circuit_breaker then stops most requests from even
+# attempting a connection during a sustained outage — see REDIS_BREAKER_SECONDS.
+REDIS_TIMEOUT_SECONDS = env.float("REDIS_TIMEOUT_SECONDS", default=0.3)
+
+# Once any Redis call fails, core.circuit_breaker opens for this long: the
+# rate limiter fails open and the notification enqueue path leaves the
+# submission pending, both without attempting Redis at all, until it closes
+# again and the next call re-probes.
+REDIS_BREAKER_SECONDS = env.float("REDIS_BREAKER_SECONDS", default=5)
+
+# django-rq's "URL" connection style (redis_cls.from_url(...)) doesn't
+# forward extra client kwargs, so REDIS_TIMEOUT_SECONDS is applied via the
+# HOST/PORT/REDIS_CLIENT_KWARGS style instead — same Redis instance, just a
+# config shape django-rq will actually pass socket timeouts through on.
+_redis_url_parts = urlparse(REDIS_URL)
+_REDIS_CONNECTION_CONFIG = {
+    "HOST": _redis_url_parts.hostname,
+    "PORT": _redis_url_parts.port or 6379,
+    "DB": int((_redis_url_parts.path or "/0").lstrip("/") or 0),
+    "PASSWORD": _redis_url_parts.password,
+    "REDIS_CLIENT_KWARGS": {
+        "socket_connect_timeout": REDIS_TIMEOUT_SECONDS,
+        "socket_timeout": REDIS_TIMEOUT_SECONDS,
     },
+}
+
+RQ_QUEUES = {
+    "default": dict(_REDIS_CONNECTION_CONFIG),
+    "emails": dict(_REDIS_CONNECTION_CONFIG),
 }
 
 # Shared with RQ's Redis instance; KEY_PREFIX keeps our keys distinct from rq:* keys.
@@ -110,6 +176,10 @@ CACHES = {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
         "LOCATION": REDIS_URL,
         "KEY_PREFIX": "easyforms",
+        "OPTIONS": {
+            "socket_connect_timeout": REDIS_TIMEOUT_SECONDS,
+            "socket_timeout": REDIS_TIMEOUT_SECONDS,
+        },
     }
 }
 

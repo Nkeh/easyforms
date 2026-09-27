@@ -2,11 +2,11 @@ import pytest
 from django.core import mail
 from django.template import TemplateDoesNotExist
 
-from notifications.email import send_transactional
+from notifications.email import _send_now, send_transactional
 
 
-def test_send_transactional_sends_text_and_html_alternative():
-    send_transactional(
+def test_send_now_sends_text_and_html_alternative():
+    _send_now(
         to="owner@example.com",
         subject="Verify your EasyForms email",
         template="verify_email",
@@ -24,11 +24,23 @@ def test_send_transactional_sends_text_and_html_alternative():
     assert "https://example.com/verify/abc" in html_body
 
 
-def test_send_transactional_raises_for_missing_template():
+def test_send_now_raises_for_missing_template():
     with pytest.raises(TemplateDoesNotExist):
-        send_transactional(
+        _send_now(
             to="owner@example.com",
             subject="Subject",
             template="does_not_exist",
             context={},
         )
+
+
+def test_send_transactional_enqueues_and_sends_via_job():
+    send_transactional(
+        to="owner@example.com",
+        subject="Verify your EasyForms email",
+        template="verify_email",
+        context={"verify_url": "https://example.com/verify/abc", "user": None},
+    )
+
+    assert len(mail.outbox) == 1
+    assert mail.outbox[0].to == ["owner@example.com"]

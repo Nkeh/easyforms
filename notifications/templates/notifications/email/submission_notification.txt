@@ -1,0 +1,7 @@
+New submission for "{{ form.name }}"
+
+{% autoescape off %}{% for label, value in fields %}{{ label }}: {{ value }}
+{% endfor %}{% endautoescape %}
+Submitted: {{ created_at }}
+
+View this form: {{ form_url }}

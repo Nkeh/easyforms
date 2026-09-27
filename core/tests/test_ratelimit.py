@@ -3,7 +3,7 @@ import logging
 import redis
 from django.conf import settings
 
-from core import ratelimit
+from core import circuit_breaker, ratelimit
 
 
 def _clear(bucket, key):
@@ -51,6 +51,31 @@ def test_fail_open_when_redis_errors(monkeypatch, caplog):
     assert result.allowed is True
     assert result.retry_after is None
     assert "rate limiter unavailable" in caplog.text
+
+
+def test_hit_trips_the_shared_breaker_on_redis_error(monkeypatch):
+    def _raise(*args, **kwargs):
+        raise redis.ConnectionError("boom")
+
+    monkeypatch.setattr(ratelimit, "_get_script", lambda: _raise)
+
+    assert circuit_breaker.is_open() is False
+    ratelimit.hit("test_trip_from_ratelimit", "k1", limit=1, window_seconds=60)
+    assert circuit_breaker.is_open() is True
+
+
+def test_hit_skips_redis_entirely_while_breaker_open(monkeypatch):
+    circuit_breaker.trip()
+
+    def _fail_if_called():
+        raise AssertionError("hit() must not touch Redis while the breaker is open")
+
+    monkeypatch.setattr(ratelimit, "_get_script", _fail_if_called)
+
+    result = ratelimit.hit("test_breaker_open", "k1", limit=1, window_seconds=60)
+
+    assert result.allowed is True
+    assert result.retry_after is None
 
 
 def test_combine_allows_when_all_allowed():

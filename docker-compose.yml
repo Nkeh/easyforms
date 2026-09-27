@@ -19,7 +19,7 @@ services:
 
   worker:
     build: .
-    command: python manage.py rqworker default
+    command: python manage.py rqworker emails default
     env_file: .env
     environment:
       DJANGO_SETTINGS_MODULE: config.settings.local
@@ -31,6 +31,14 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      mailpit:
+        condition: service_started
+
+  mailpit:
+    image: axllent/mailpit
+    ports:
+      - "1025:1025"
+      - "8025:8025"
 
   db:
     image: postgres:16

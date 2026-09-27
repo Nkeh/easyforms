@@ -4,6 +4,8 @@ from django.db import connection
 from django.db.utils import OperationalError
 from django.http import JsonResponse
 
+from core import bounded_call
+
 
 def healthz(request):
     db_ok = _check_db()
@@ -28,7 +30,11 @@ def _check_db() -> bool:
 
 def _check_redis() -> bool:
     try:
-        client = redis.Redis.from_url(settings.REDIS_URL, socket_connect_timeout=1)
-        return bool(client.ping())
-    except redis.RedisError:
+        client = redis.Redis.from_url(
+            settings.REDIS_URL,
+            socket_connect_timeout=settings.REDIS_TIMEOUT_SECONDS,
+            socket_timeout=settings.REDIS_TIMEOUT_SECONDS,
+        )
+        return bool(bounded_call.run_bounded(client.ping, timeout=settings.REDIS_TIMEOUT_SECONDS))
+    except (redis.RedisError, TimeoutError):
         return False

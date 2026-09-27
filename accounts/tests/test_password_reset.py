@@ -38,6 +38,29 @@ def test_reset_uses_send_transactional_with_expected_template_and_context(client
     assert "token" in call["context"]
 
 
+def test_reset_email_is_sent_via_the_emails_queue_not_inline(client, monkeypatch):
+    from notifications.tasks import send_transactional_job
+
+    User.objects.create_user(email="owner@example.com", password="s3cret-pass123")
+    queue_names = []
+    enqueued_funcs = []
+
+    class _RecordingQueue:
+        def enqueue(self, func, *args, **kwargs):
+            enqueued_funcs.append(func)
+
+    def _get_queue(name):
+        queue_names.append(name)
+        return _RecordingQueue()
+
+    monkeypatch.setattr("notifications.tasks.django_rq.get_queue", _get_queue)
+
+    client.post("/reset", {"email": "owner@example.com"})
+
+    assert queue_names == ["emails"]
+    assert enqueued_funcs == [send_transactional_job]
+
+
 def test_reset_confirm_round_trip_sets_new_password(client):
     User.objects.create_user(email="owner@example.com", password="old-pass-123")
     user = User.objects.get(email="owner@example.com")

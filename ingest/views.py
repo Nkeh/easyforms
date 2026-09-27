@@ -19,9 +19,26 @@ from ingest.parsing import InvalidPayload, PayloadTooLarge, UnsupportedMediaType
 from ingest.rate_limit import check_ip_limit, check_token_limit
 from ingest.redirects import resolve_redirect_url
 from ingest.responses import error_response, wants_json
+from notifications.tasks import enqueue_submission_notification
 from spam import scoring as spam_scoring
 
 logger = logging.getLogger("ingest")
+
+
+def _enqueue_notification(form_id, submission_id) -> None:
+    try:
+        enqueue_submission_notification(submission_id)
+    except Exception:
+        # Redis down or similar at enqueue time (NFR-3: the response must be
+        # unaffected). Leave notification_status=pending — never "failed"
+        # here, since the job itself never ran; send_pending_notifications
+        # is the safety net that will pick this row up later.
+        logger.warning(
+            "ingest: failed to enqueue submission notification form_id=%s submission_id=%s",
+            form_id,
+            submission_id,
+            exc_info=True,
+        )
 
 
 def _log(form, response, start_time, verdict=None):
@@ -134,6 +151,8 @@ def submit(request, token):
             response = error_response(request, "quota_exceeded", 429, form=form)
             return _log(form, response, start_time, verdict=verdict)
 
+        has_verified_recipient = form.account.users.filter(is_verified=True).exists()
+
         with transaction.atomic():
             submission = Submission.objects.create(
                 form=form,
@@ -143,15 +162,26 @@ def submit(request, token):
                 spam_signals=verdict.signals,
                 model_version=verdict.model_version,
                 source_ip_hash=ip_hash,
+                notification_status=(
+                    Submission.NotificationStatus.PENDING
+                    if has_verified_recipient
+                    else Submission.NotificationStatus.SKIPPED
+                ),
             )
             # check-then-insert can overshoot slightly under concurrency (two
             # requests both pass check_limit before either commits); accepted.
             UsageEvent.objects.create(account=form.account, kind="submission", quantity=1)
 
+            if has_verified_recipient:
+                # ids only across the commit boundary — never the ORM objects.
+                submission_id = submission.id
+                transaction.on_commit(lambda: _enqueue_notification(form.id, submission_id))
+
         response = _build_success_response(request, form, reserved, origin, submission.id)
         return _log(form, response, start_time, verdict=verdict)
 
-    # Spam: never quota-checked, never metered (CLAUDE.md rule 7).
+    # Spam: never quota-checked, never metered (CLAUDE.md rule 7), never
+    # notified (FR-5.1).
     if form.spam_action == Form.SpamAction.FLAG:
         submission = Submission.objects.create(
             form=form,
@@ -161,6 +191,7 @@ def submit(request, token):
             spam_signals=verdict.signals,
             model_version=verdict.model_version,
             source_ip_hash=ip_hash,
+            notification_status=Submission.NotificationStatus.SKIPPED,
         )
         submission_id = submission.id
     else:  # Form.SpamAction.DROP
