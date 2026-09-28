@@ -79,9 +79,17 @@ docker compose run --rm web python manage.py makemigrations / migrate
 - **At the end of each task**, propose one or more conventional commit messages
   (e.g. `feat(ingest): accept JSON and form-encoded POSTs (FR-3.1)`) and list
   which files belong in each commit.
-- **End every task with a summary:** files changed, FRs covered, how to verify
-  manually, test results, deviations from the SRS, follow-ups, suggested
-  commit message(s) and the corresponding files to add to each commit.
+- **End every task with a summary** (also written to docs/progress/day-NN.md):
+  files changed, FRs covered, how to verify manually, test results, deviations,
+  follow-ups, and a copy-paste commit block.
+- **Test count:** report the total collected test count and compare it with
+  the previous day's summary. Explain any decrease explicitly.
+- **Commit block format:** give exact, copy-paste-ready commands, one
+  `git add <explicit paths>` + `git commit -m "<conventional message>"` pair
+  per commit, in order, followed by `git status` (expected: clean). Never use
+  `git add -A` or `git add .`. Every commit must pass tests on its own, no file
+  may appear in two commits, and prefer 2–4 cohesive commits per day over
+  fine-grained splits. The day's docs/progress file goes in the last commit.
 - **Commit suggestions must be ordered so every commit passes tests on its own,
   and a single file must never be split across commits.** When in doubt, suggest
   one commit per day.
@@ -91,7 +99,7 @@ docker compose run --rm web python manage.py makemigrations / migrate
   a form edits stored data (catches initial-value rendering bugs).
 
 ## Progress
-- [*] Day 1 — Compose skeleton, settings, custom user stub, healthz, tooling
+- [x] Day 1 — Compose skeleton, settings, custom user stub, healthz, tooling
 - [ ] Day 2 — Data model + migrations + admin
 - [ ] Day 3 — Auth flows
 - [ ] Day 4 — Form CRUD + token + snippet
