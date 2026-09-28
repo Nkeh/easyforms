@@ -1,0 +1,19 @@
+Schibsted Grotesk (variable, latin subset)
+
+Vendored from Google Fonts (fonts.gstatic.com), family "Schibsted Grotesk"
+v7, weight axis 400-900 (single variable font file covering the whole range
+used by this app: 400/500/600).
+
+Source URL:
+  https://fonts.gstatic.com/s/schibstedgrotesk/v7/Jqz55SSPQuCQF3t8uOwiUL-taUTtap9Gayo.woff2
+SHA-256 of the vendored file:
+  4c8b93f431d462c696e12b9d6a033feb3394d36e66e781357c496b95d8a75e05
+
+License: SIL Open Font License 1.1, see OFL.txt in this directory.
+Copyright 2023 The Schibsted-Grotesk Project Authors
+(https://github.com/schibsted/schibsted-grotesk).
+
+Candidates were Schibsted Grotesk / Onest / Figtree (in try-order); all three
+turned out to carry `tnum` (tabular figures) in their GSUB table, so the
+first — Schibsted Grotesk — won. It also has the fullest numeral feature set
+of the three (dnom/numr/frac/pnum/tnum vs. Onest's pnum/tnum only).

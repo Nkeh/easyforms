@@ -1,15 +1,8 @@
 from django import forms
 
-_DEFAULT_CLASS = (
-    "block w-full rounded-md border-slate-300 shadow-sm "
-    "focus:border-blue-500 focus-visible:outline-none focus-visible:ring-2 "
-    "focus-visible:ring-blue-500 sm:text-sm"
-)
+_DEFAULT_CLASS = "field-input"
 _WIDGET_CLASSES = {
-    forms.CheckboxInput: (
-        "h-4 w-4 rounded border-slate-300 text-blue-600 "
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-    ),
+    forms.CheckboxInput: "field-checkbox",
 }
 
 

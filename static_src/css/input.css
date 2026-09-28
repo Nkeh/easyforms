@@ -1,3 +1,151 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Schibsted Grotesk — self-hosted variable font, latin subset.
+   Vendored from Google Fonts; see static/fonts/schibsted-grotesk/NOTICE.txt
+   and OFL.txt for provenance and license. Chosen (over Onest/Figtree) for
+   carrying the `tnum` OpenType feature, verified with fontTools. */
+@font-face {
+  font-family: "Schibsted Grotesk";
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url("../fonts/schibsted-grotesk/SchibstedGrotesk-Variable-latin.woff2")
+    format("woff2");
+}
+
+@layer base {
+  /* Global motion kill switch — every transition/animation below (buttons,
+     links, htmx cross-fade, toasts, mobile drawer) is neutralized here in
+     one place instead of needing its own media query. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  /* Form widgets — referenced from core/forms.py (TailwindStyledForm), which
+     is why this has to be a @layer components class rather than a utility
+     string: Tailwind's content scanner never sees .py files. */
+  .field-input {
+    @apply block w-full rounded border border-line bg-white text-ink placeholder:text-ink/40 focus:border-ink-raised focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink sm:text-sm;
+  }
+  .field-checkbox {
+    @apply h-4 w-4 rounded-sm border border-line accent-signal-deep focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink;
+  }
+
+  /* Buttons */
+  .btn {
+    @apply inline-flex items-center justify-center gap-1.5 rounded px-4 py-2 text-sm font-medium transition-colors duration-150 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink active:scale-[0.98];
+  }
+  .btn-primary {
+    @apply bg-signal text-ink hover:brightness-95 active:brightness-90;
+  }
+  .btn-secondary {
+    @apply border border-line bg-white text-ink hover:bg-paper;
+  }
+  .btn-danger {
+    @apply bg-danger text-paper hover:brightness-95;
+  }
+
+  /* Panels / key-value metadata blocks (settings, form detail, submission
+     detail all repeat the same dl layout) */
+  .panel {
+    @apply rounded-lg border border-line bg-white;
+  }
+  .kv-row {
+    @apply grid grid-cols-3 gap-4 px-4 py-3;
+  }
+  .kv-label {
+    @apply text-sm font-medium text-ink/70;
+  }
+  .kv-value {
+    @apply col-span-2 break-words text-sm text-ink;
+  }
+
+  /* Status pills */
+  .pill {
+    @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium;
+  }
+  .pill-good {
+    @apply bg-signal/10 text-signal-deep;
+  }
+  .pill-bad {
+    @apply bg-danger-soft text-danger;
+  }
+  .pill-neutral {
+    @apply bg-line/40 text-ink;
+  }
+
+  /* Submissions-list filter tabs */
+  .tab {
+    @apply rounded px-2 py-1 text-sm font-medium transition-colors duration-150 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink;
+  }
+  .tab-active {
+    @apply bg-signal/10 text-signal-deep;
+  }
+  .tab-inactive {
+    @apply text-ink/70 hover:text-ink;
+  }
+
+  /* Sidebar / mobile topbar nav links (ink surface, so the focus outline
+     and hover state use signal, not ink) */
+  .nav-link {
+    @apply rounded text-sm text-paper/70 transition-colors duration-150 ease-out hover:text-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-signal;
+  }
+}
+
+/* HTMX cross-fade for the submissions filter/pagination swap. Plain CSS
+   (not @apply) since it targets htmx's own runtime classes, not anything
+   Tailwind generates. */
+#submissions-panel {
+  opacity: 1;
+  transition: opacity 150ms ease-out;
+}
+#submissions-panel.htmx-swapping,
+#submissions-panel.htmx-settling {
+  opacity: 0;
+}
+
+/* Toasts (progressively enhance the server-rendered messages list) */
+.toast {
+  opacity: 0;
+  transform: translateY(-8px);
+  transition:
+    opacity 200ms ease-out,
+    transform 200ms ease-out;
+}
+.toast.toast-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.toast.toast-leaving {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+/* Mobile nav drawer */
+#mobile-drawer {
+  transform: translateX(-100%);
+  transition: transform 200ms ease-out;
+}
+#mobile-drawer.drawer-open {
+  transform: translateX(0);
+}
+#mobile-drawer-backdrop {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms ease-out;
+}
+#mobile-drawer-backdrop.backdrop-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
