@@ -1,0 +1,22 @@
+{% if messages %}
+  <div id="toast-container"
+       class="pointer-events-none fixed inset-x-0 top-0 z-50 flex flex-col items-center gap-2 p-4 sm:items-end">
+    {% for message in messages %}
+      <div class="toast pointer-events-auto w-full max-w-sm rounded border px-4 py-3 text-sm
+          {% if 'error' in message.tags %}border-danger bg-danger-soft text-danger
+          {% elif 'success' in message.tags %}border-signal-deep bg-signal/10 text-signal-deep
+          {% else %}border-line bg-white text-ink{% endif %}"
+          role="{% if 'error' in message.tags %}alert{% else %}status{% endif %}"
+          data-tags="{{ message.tags }}">
+        <div class="flex items-start justify-between gap-3">
+          <p class="flex-1">{{ message }}</p>
+          <button type="button"
+                  class="toast-dismiss shrink-0 rounded text-ink/50 transition-colors duration-150 ease-out hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                  aria-label="Dismiss">
+            &times;
+          </button>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}

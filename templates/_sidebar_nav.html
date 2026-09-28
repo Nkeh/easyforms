@@ -1,0 +1,11 @@
+<nav class="mt-6 flex flex-1 flex-col gap-1" aria-label="Main">
+  <a href="{% url 'dashboard:home' %}" class="nav-link px-2 py-1.5">Forms</a>
+  <a href="{% url 'accounts:settings' %}" class="nav-link px-2 py-1.5">Settings</a>
+</nav>
+<div class="mt-6 border-t border-paper/20 pt-4">
+  <p class="truncate text-xs text-paper/70">{{ user.email }}</p>
+  <form method="post" action="{% url 'accounts:logout' %}" class="mt-2">
+    {% csrf_token %}
+    <button type="submit" class="nav-link px-2 py-1.5">Log out</button>
+  </form>
+</div>

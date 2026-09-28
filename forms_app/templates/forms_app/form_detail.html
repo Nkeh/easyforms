@@ -1,33 +1,38 @@
 {% extends "base.html" %}
 
-{% block title %}{{ form_obj.name }} — EasyForms{% endblock %}
+{% block title %}{{ form_obj.name }} — Easyforms{% endblock %}
 
 {% block content %}
-  <div class="flex items-center justify-between">
-    <h1 class="text-2xl font-semibold text-slate-900">{{ form_obj.name }}</h1>
-    <a href="{% url 'dashboard:submission_list' pk=form_obj.pk %}"
-       class="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700
-              hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+  <div class="flex items-center justify-between gap-4">
+    <h1 class="text-2xl font-semibold text-ink">{{ form_obj.name }}</h1>
+    <a href="{% url 'dashboard:submission_list' pk=form_obj.pk %}" class="btn btn-secondary shrink-0">
       View submissions
     </a>
   </div>
 
-  <dl class="mt-6 divide-y divide-slate-200 rounded-lg border border-slate-200 bg-white shadow-sm">
-    <div class="grid grid-cols-3 gap-4 px-4 py-3">
-      <dt class="text-sm font-medium text-slate-500">Token</dt>
-      <dd class="col-span-2 text-sm text-slate-900"><code>{{ form_obj.token }}</code></dd>
+  <div class="mt-6 rounded-lg bg-ink px-5 py-4">
+    <p class="text-xs text-paper/70">Endpoint URL</p>
+    <div class="mt-1 flex items-center justify-between gap-4">
+      <code id="endpoint-url" class="overflow-x-auto whitespace-nowrap text-base text-paper sm:text-lg">{{ form_obj.endpoint_url }}</code>
+      <button type="button" data-copy-target="endpoint-url"
+              class="btn btn-primary shrink-0 focus-visible:outline-signal">
+        <span data-copy-label>Copy</span>
+      </button>
     </div>
-    <div class="grid grid-cols-3 gap-4 px-4 py-3">
-      <dt class="text-sm font-medium text-slate-500">Endpoint URL</dt>
-      <dd class="col-span-2 text-sm text-slate-900"><code>{{ form_obj.endpoint_url }}</code></dd>
+  </div>
+
+  <dl class="panel mt-4 divide-y divide-line">
+    <div class="kv-row">
+      <dt class="kv-label">Token</dt>
+      <dd class="kv-value"><code>{{ form_obj.token }}</code></dd>
     </div>
-    <div class="grid grid-cols-3 gap-4 px-4 py-3">
-      <dt class="text-sm font-medium text-slate-500">Status</dt>
-      <dd class="col-span-2 text-sm text-slate-900">
+    <div class="kv-row">
+      <dt class="kv-label">Status</dt>
+      <dd class="kv-value">
         {% if form_obj.is_active %}
-          <span class="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">Active</span>
+          <span class="pill pill-good">Active</span>
         {% else %}
-          <span class="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">Inactive</span>
+          <span class="pill pill-neutral">Inactive</span>
         {% endif %}
       </dd>
     </div>
@@ -37,20 +42,14 @@
     {% if form_obj.is_active %}
       <form method="post" action="{% url 'forms_app:deactivate' pk=form_obj.pk %}">
         {% csrf_token %}
-        <button type="submit"
-                class="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium
-                       text-slate-700 hover:bg-slate-50 focus-visible:outline-none
-                       focus-visible:ring-2 focus-visible:ring-blue-500">
+        <button type="submit" class="btn btn-secondary">
           Deactivate
         </button>
       </form>
     {% else %}
       <form method="post" action="{% url 'forms_app:activate' pk=form_obj.pk %}">
         {% csrf_token %}
-        <button type="submit"
-                class="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700
-                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500
-                       focus-visible:ring-offset-2">
+        <button type="submit" class="btn btn-primary">
           Reactivate
         </button>
       </form>
@@ -58,51 +57,33 @@
   </div>
 
   {% if not form_obj.allowed_origins %}
-    <p class="mt-4 rounded-md border border-yellow-200 bg-yellow-50 px-4 py-2 text-sm text-yellow-800">
+    <p class="mt-4 rounded border border-line bg-white px-4 py-2 text-sm text-ink">
       Any website can submit to this form. Add allowed origins to restrict it.
     </p>
   {% endif %}
 
-  <h2 class="mt-8 text-lg font-semibold text-slate-900">Settings</h2>
+  <h2 class="mt-8 text-lg font-semibold text-ink">Settings</h2>
   <form method="post" novalidate class="mt-4 max-w-lg">
     {% csrf_token %}
     {% include "_form_fields.html" with form=edit_form %}
-    <button type="submit"
-            class="rounded-md bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700
-                   focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500
-                   focus-visible:ring-offset-2">
+    <button type="submit" class="btn btn-primary">
       Save
     </button>
   </form>
 
-  <h2 class="mt-8 text-lg font-semibold text-slate-900">Embed snippet</h2>
+  <h2 id="embed-snippet" class="mt-8 text-lg font-semibold text-ink">Embed snippet</h2>
 
-  <h3 class="mt-4 text-sm font-semibold text-slate-700">Plain HTML form</h3>
+  <h3 class="mt-4 text-sm font-semibold text-ink">Plain HTML form</h3>
   <pre id="html-snippet"
-       class="mt-2 overflow-x-auto rounded-md border border-slate-200 bg-slate-900 p-4 text-xs text-slate-100">{{ html_snippet }}</pre>
-  <button type="button" onclick="easyformsCopy('html-snippet')"
-          class="mt-2 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium
-                 text-slate-700 hover:bg-slate-50 focus-visible:outline-none
-                 focus-visible:ring-2 focus-visible:ring-blue-500">
-    Copy
+       class="mt-2 overflow-x-auto rounded border border-line bg-ink p-4 text-xs text-paper">{{ html_snippet }}</pre>
+  <button type="button" data-copy-target="html-snippet" class="btn btn-secondary mt-2">
+    <span data-copy-label>Copy</span>
   </button>
 
-  <h3 class="mt-6 text-sm font-semibold text-slate-700">Fetch (JSON)</h3>
+  <h3 class="mt-6 text-sm font-semibold text-ink">Fetch (JSON)</h3>
   <pre id="fetch-snippet"
-       class="mt-2 overflow-x-auto rounded-md border border-slate-200 bg-slate-900 p-4 text-xs text-slate-100">{{ fetch_snippet }}</pre>
-  <button type="button" onclick="easyformsCopy('fetch-snippet')"
-          class="mt-2 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium
-                 text-slate-700 hover:bg-slate-50 focus-visible:outline-none
-                 focus-visible:ring-2 focus-visible:ring-blue-500">
-    Copy
+       class="mt-2 overflow-x-auto rounded border border-line bg-ink p-4 text-xs text-paper">{{ fetch_snippet }}</pre>
+  <button type="button" data-copy-target="fetch-snippet" class="btn btn-secondary mt-2">
+    <span data-copy-label>Copy</span>
   </button>
-
-  <script>
-    function easyformsCopy(id) {
-      var el = document.getElementById(id);
-      if (el && navigator.clipboard) {
-        navigator.clipboard.writeText(el.innerText);
-      }
-    }
-  </script>
 {% endblock %}

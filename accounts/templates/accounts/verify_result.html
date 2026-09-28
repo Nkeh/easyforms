@@ -1,36 +1,31 @@
-{% extends "base.html" %}
+{% extends "base_centered.html" %}
 
-{% block title %}Email verification — EasyForms{% endblock %}
+{% block title %}Email verification — Easyforms{% endblock %}
 
 {% block content %}
   {% if success %}
-    <h1 class="text-2xl font-semibold text-slate-900">Email verified</h1>
-    <p class="mt-2 text-slate-600">Thanks — your email address is now verified.</p>
+    <h1 class="text-2xl font-semibold text-ink">Email verified</h1>
+    <p class="mt-2 text-ink/70">Thanks — your email address is now verified.</p>
     <p class="mt-4">
       <a href="{% url 'dashboard:home' %}"
-         class="rounded font-medium text-blue-600 hover:text-blue-700 focus-visible:outline-none
-                focus-visible:ring-2 focus-visible:ring-blue-500">
+         class="rounded font-medium text-signal-deep hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink">
         Go to your dashboard
       </a>
     </p>
   {% else %}
-    <h1 class="text-2xl font-semibold text-slate-900">Verification link invalid</h1>
-    <p class="mt-2 text-slate-600">This verification link is invalid or has expired.</p>
+    <h1 class="text-2xl font-semibold text-ink">Verification link invalid</h1>
+    <p class="mt-2 text-ink/70">This verification link is invalid or has expired.</p>
     {% if user.is_authenticated and not user.is_verified %}
       <form method="post" action="{% url 'accounts:resend_verification' %}" class="mt-4">
         {% csrf_token %}
-        <button type="submit"
-                class="rounded-md bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700
-                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500
-                       focus-visible:ring-offset-2">
+        <button type="submit" class="btn btn-primary">
           Send a new verification email
         </button>
       </form>
     {% else %}
-      <p class="mt-4">
+      <p class="mt-4 text-ink/70">
         <a href="{% url 'accounts:login' %}"
-           class="rounded font-medium text-blue-600 hover:text-blue-700 focus-visible:outline-none
-                  focus-visible:ring-2 focus-visible:ring-blue-500">
+           class="rounded font-medium text-signal-deep hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink">
           Log in
         </a>
         to request a new one.

@@ -1,82 +1,55 @@
-{% load static %}<!DOCTYPE html>
-<html lang="en" class="h-full bg-slate-50">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="{% static 'css/app.css' %}">
-  <title>{% block title %}EasyForms{% endblock %}</title>
-</head>
-<body class="min-h-full text-slate-900">
+{% extends "_base_html.html" %}
+{% load static %}
+
+{% block body %}
   <a href="#main-content"
-     class="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50
-            focus:rounded-md focus:bg-white focus:px-3 focus:py-2 focus:shadow-md
-            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+     class="sr-only focus:not-sr-only focus:fixed focus:left-2 focus:top-2 focus:z-50
+            focus:rounded focus:bg-white focus:px-3 focus:py-2
+            focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink">
     Skip to content
   </a>
 
-  <nav class="border-b border-slate-200 bg-white">
-    <div class="mx-auto flex max-w-4xl items-center justify-between px-4 py-3">
-      <a href="{% url 'dashboard:home' %}"
-         class="rounded text-lg font-semibold text-slate-900 focus-visible:outline-none
-                focus-visible:ring-2 focus-visible:ring-blue-500">
-        EasyForms
-      </a>
-      <div class="flex items-center gap-4 text-sm">
-        {% if user.is_authenticated %}
-          <a href="{% url 'accounts:settings' %}"
-             class="rounded text-slate-600 hover:text-slate-900 focus-visible:outline-none
-                    focus-visible:ring-2 focus-visible:ring-blue-500">
-            Settings
-          </a>
-          <form method="post" action="{% url 'accounts:logout' %}">
-            {% csrf_token %}
-            <button type="submit"
-                    class="rounded text-slate-600 hover:text-slate-900 focus-visible:outline-none
-                           focus-visible:ring-2 focus-visible:ring-blue-500">
-              Log out
-            </button>
-          </form>
-        {% else %}
-          <a href="{% url 'accounts:login' %}"
-             class="rounded text-slate-600 hover:text-slate-900 focus-visible:outline-none
-                    focus-visible:ring-2 focus-visible:ring-blue-500">
-            Log in
-          </a>
-          <a href="{% url 'accounts:signup' %}"
-             class="rounded-md bg-blue-600 px-3 py-1.5 font-medium text-white hover:bg-blue-700
-                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500
-                    focus-visible:ring-offset-2">
-            Sign up
-          </a>
-        {% endif %}
-      </div>
+  {% include "_messages.html" %}
+
+  <div class="flex min-h-full flex-col md:flex-row">
+    <div class="flex items-center justify-between bg-ink px-4 py-3 md:hidden">
+      <a href="{% url 'dashboard:home' %}" class="nav-link text-base font-semibold text-paper">Easyforms</a>
+      <button type="button" id="mobile-menu-toggle" aria-expanded="false" aria-controls="mobile-drawer"
+              class="rounded px-2 py-1 text-xl leading-none text-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-signal">
+        <span class="sr-only">Open menu</span>
+        <span aria-hidden="true">&#9776;</span>
+      </button>
     </div>
-  </nav>
 
-  <div class="mx-auto max-w-4xl px-4 pt-4">
-    {% if messages %}
-      <ul class="messages mb-4 space-y-2">
-        {% for message in messages %}
-          <li class="{{ message.tags }} rounded-md border px-4 py-2 text-sm
-              {% if 'error' in message.tags %}border-red-200 bg-red-50 text-red-800
-              {% elif 'success' in message.tags %}border-green-200 bg-green-50 text-green-800
-              {% elif 'warning' in message.tags %}border-yellow-200 bg-yellow-50 text-yellow-800
-              {% else %}border-blue-200 bg-blue-50 text-blue-800{% endif %}">
-            {{ message }}
-          </li>
-        {% endfor %}
-      </ul>
-    {% endif %}
+    <aside class="hidden w-64 shrink-0 flex-col bg-ink px-4 py-6 md:flex">
+      <a href="{% url 'dashboard:home' %}" class="nav-link text-base font-semibold text-paper">Easyforms</a>
+      {% include "_sidebar_nav.html" %}
+    </aside>
 
-    {% if user.is_authenticated and not user.is_verified %}
-      {% include "accounts/_resend_banner.html" %}
-    {% endif %}
+    <div id="mobile-drawer-backdrop" class="fixed inset-0 z-40 bg-ink/50 md:hidden"></div>
+    <div id="mobile-drawer" role="dialog" aria-modal="true" aria-label="Main menu"
+         class="fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-ink px-4 py-6 md:hidden">
+      <div class="flex items-center justify-between">
+        <span class="text-base font-semibold text-paper">Easyforms</span>
+        <button type="button" id="mobile-menu-close"
+                class="nav-link px-2 py-1 text-xl leading-none">
+          <span class="sr-only">Close menu</span>
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      {% include "_sidebar_nav.html" %}
+    </div>
+
+    <div class="min-w-0 flex-1 bg-paper">
+      <main id="main-content" class="mx-auto max-w-4xl px-4 py-6 sm:px-6">
+        {% if user.is_authenticated and not user.is_verified %}
+          {% include "accounts/_resend_banner.html" %}
+        {% endif %}
+        {% block content %}{% endblock %}
+      </main>
+    </div>
   </div>
 
-  <main id="main-content" class="mx-auto max-w-4xl px-4 py-6">
-    {% block content %}{% endblock %}
-  </main>
-
   <script src="{% static 'js/htmx.min.js' %}" defer></script>
-</body>
-</html>
+  <script src="{% static 'js/app.js' %}" defer></script>
+{% endblock %}

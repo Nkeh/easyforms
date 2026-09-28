@@ -102,7 +102,4 @@ def test_failed_notification_status_is_highlighted(client):
     response = client.get(f"/forms/{form_obj.pk}/submissions")
     content = response.content.decode()
 
-    assert (
-        '<span class="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium '
-        'text-red-800">Failed</span>' in content
-    )
+    assert '<span class="pill pill-bad">&#9888; Failed</span>' in content

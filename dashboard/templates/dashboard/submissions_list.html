@@ -1,83 +1,60 @@
 {% extends "base.html" %}
 
-{% block title %}Submissions — {{ form_obj.name }} — EasyForms{% endblock %}
+{% block title %}Submissions — {{ form_obj.name }} — Easyforms{% endblock %}
 
 {% block content %}
-  <div class="flex items-center justify-between">
-    <h1 class="text-2xl font-semibold text-slate-900">Submissions — {{ form_obj.name }}</h1>
-    <a href="{% url 'dashboard:submissions_csv' pk=form_obj.pk %}?status={{ status }}"
-       class="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700
-              hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+  <div class="flex items-center justify-between gap-4">
+    <h1 class="text-2xl font-semibold text-ink">Submissions — {{ form_obj.name }}</h1>
+    <a href="{% url 'dashboard:submissions_csv' pk=form_obj.pk %}?status={{ status }}" class="btn btn-secondary shrink-0">
       Export CSV
     </a>
   </div>
 
   <div id="submissions-panel" class="mt-6">
-    <nav class="flex gap-4 text-sm" aria-label="Filter by status">
+    <nav class="flex gap-2 text-sm" aria-label="Filter by status">
       {% for value, label in filters %}
         <a href="?status={{ value }}"
            hx-get="?status={{ value }}"
            hx-select="#submissions-panel"
            hx-target="#submissions-panel"
-           hx-swap="outerHTML"
+           hx-swap="outerHTML swap:150ms settle:150ms"
            hx-push-url="true"
-           class="rounded px-2 py-1 font-medium focus-visible:outline-none focus-visible:ring-2
-                  focus-visible:ring-blue-500
-                  {% if status == value %}bg-blue-100 text-blue-800{% else %}text-slate-600 hover:text-slate-900{% endif %}">
+           data-filter-value="{{ value }}"
+           class="tab {% if status == value %}tab-active{% else %}tab-inactive{% endif %}">
           {{ label }}
         </a>
       {% endfor %}
     </nav>
 
     {% if rows %}
-      <div class="mt-4 overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
-        <table class="min-w-full divide-y divide-slate-200 text-sm">
-          <thead class="bg-slate-50">
-            <tr>
-              <th scope="col" class="px-4 py-2 text-left font-medium text-slate-500">Time</th>
-              <th scope="col" class="px-4 py-2 text-left font-medium text-slate-500">Status</th>
-              <th scope="col" class="px-4 py-2 text-left font-medium text-slate-500">Preview</th>
-              <th scope="col" class="px-4 py-2 text-left font-medium text-slate-500">Signals</th>
-              <th scope="col" class="px-4 py-2 text-left font-medium text-slate-500">Notification</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-200">
-            {% for row in rows %}
-              {% with submission=row.submission %}
-                <tr>
-                  <td class="whitespace-nowrap px-4 py-2 text-slate-500">
-                    <a href="{% url 'dashboard:submission_detail' pk=form_obj.pk submission_pk=submission.pk %}"
-                       class="rounded font-medium text-blue-600 hover:text-blue-700
-                              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
-                      {{ submission.created_at|date:"Y-m-d H:i" }}
-                    </a>
-                  </td>
-                  <td class="px-4 py-2">
-                    {% if submission.status == "ham" %}
-                      <span class="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">Ham</span>
-                    {% else %}
-                      <span class="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">Spam</span>
-                    {% endif %}
-                  </td>
-                  <td class="max-w-xs truncate px-4 py-2 text-slate-700">{{ row.preview }}</td>
-                  <td class="px-4 py-2 text-slate-500">{{ submission.spam_signals|join:", " }}</td>
-                  <td class="px-4 py-2">
-                    {% if submission.notification_status == "failed" %}
-                      <span class="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">Failed</span>
-                    {% elif submission.notification_status == "sent" %}
-                      <span class="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">Sent</span>
-                    {% elif submission.notification_status == "pending" %}
-                      <span class="inline-flex rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800">Pending</span>
-                    {% else %}
-                      <span class="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">Skipped</span>
-                    {% endif %}
-                  </td>
-                </tr>
-              {% endwith %}
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
+      <ul class="panel mt-4 divide-y divide-line">
+        {% for row in rows %}
+          {% with submission=row.submission %}
+            <li class="border-l-[3px] {% if submission.status == 'ham' %}border-signal{% else %}border-danger{% endif %}">
+              <a href="{% url 'dashboard:submission_detail' pk=form_obj.pk submission_pk=submission.pk %}"
+                 class="flex items-center justify-between gap-4 px-4 py-3 transition-colors duration-150 ease-out hover:bg-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink">
+                <div class="min-w-0 flex-1">
+                  <p class="truncate text-sm font-medium text-ink">{{ row.preview }}</p>
+                  <p class="tabular-nums text-xs text-ink/70">
+                    {{ submission.created_at|date:"Y-m-d H:i" }}{% if submission.spam_signals %} &middot; {{ submission.spam_signals|join:", " }}{% endif %}
+                  </p>
+                </div>
+                <div class="shrink-0">
+                  {% if submission.notification_status == "failed" %}
+                    <span class="pill pill-bad">&#9888; Failed</span>
+                  {% elif submission.notification_status == "sent" %}
+                    <span class="pill pill-good">Sent</span>
+                  {% elif submission.notification_status == "pending" %}
+                    <span class="pill pill-neutral">Pending</span>
+                  {% else %}
+                    <span class="pill pill-neutral">Skipped</span>
+                  {% endif %}
+                </div>
+              </a>
+            </li>
+          {% endwith %}
+        {% endfor %}
+      </ul>
 
       <nav class="mt-4 flex items-center justify-between text-sm" aria-label="Pagination">
         <div>
@@ -86,32 +63,49 @@
                hx-get="?status={{ status }}&page={{ page_obj.previous_page_number }}"
                hx-select="#submissions-panel"
                hx-target="#submissions-panel"
-               hx-swap="outerHTML"
+               hx-swap="outerHTML swap:150ms settle:150ms"
                hx-push-url="true"
-               class="rounded font-medium text-blue-600 hover:text-blue-700 focus-visible:outline-none
-                      focus-visible:ring-2 focus-visible:ring-blue-500">
+               class="rounded font-medium text-signal-deep hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink">
               Previous
             </a>
           {% endif %}
         </div>
-        <p class="text-slate-500">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</p>
+        <p class="tabular-nums text-ink/70">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</p>
         <div>
           {% if page_obj.has_next %}
             <a href="?status={{ status }}&page={{ page_obj.next_page_number }}"
                hx-get="?status={{ status }}&page={{ page_obj.next_page_number }}"
                hx-select="#submissions-panel"
                hx-target="#submissions-panel"
-               hx-swap="outerHTML"
+               hx-swap="outerHTML swap:150ms settle:150ms"
                hx-push-url="true"
-               class="rounded font-medium text-blue-600 hover:text-blue-700 focus-visible:outline-none
-                      focus-visible:ring-2 focus-visible:ring-blue-500">
+               class="rounded font-medium text-signal-deep hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink">
               Next
             </a>
           {% endif %}
         </div>
       </nav>
     {% else %}
-      <p class="mt-4 text-slate-600">No submissions yet.</p>
+      <div class="mt-6 text-center">
+        {% if status == "all" %}
+          <p class="text-ink/70">No submissions yet. Add the snippet to your site, then send a test.</p>
+          <a href="{% url 'forms_app:detail' pk=form_obj.pk %}#embed-snippet" class="btn btn-primary mt-4">
+            View embed snippet
+          </a>
+        {% elif status == "ham" %}
+          <p class="text-ink/70">No ham submissions.</p>
+          <a href="?status=all"
+             class="mt-2 inline-block rounded font-medium text-signal-deep hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink">
+            View all
+          </a>
+        {% else %}
+          <p class="text-ink/70">No spam submissions.</p>
+          <a href="?status=all"
+             class="mt-2 inline-block rounded font-medium text-signal-deep hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink">
+            View all
+          </a>
+        {% endif %}
+      </div>
     {% endif %}
   </div>
 {% endblock %}

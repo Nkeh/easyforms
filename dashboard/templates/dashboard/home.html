@@ -1,56 +1,74 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard — EasyForms{% endblock %}
+{% block title %}Dashboard — Easyforms{% endblock %}
 
 {% block content %}
-  <h1 class="text-2xl font-semibold text-slate-900">Dashboard</h1>
+  <h1 class="text-2xl font-semibold text-ink">Dashboard</h1>
 
-  <div class="mt-4 flex flex-wrap gap-4 text-sm text-slate-600">
-    <p>{{ forms_limit.used }} / {{ forms_limit.limit }} forms used</p>
-    <p>{{ submissions_limit.used }} / {{ submissions_limit.limit }} submissions this month</p>
+  {% widthratio forms_limit.used forms_limit.limit 100 as forms_pct %}
+  {% widthratio submissions_limit.used submissions_limit.limit 100 as submissions_pct %}
+  <div class="mt-4 grid gap-4 sm:grid-cols-2">
+    <div>
+      <div class="flex items-center justify-between text-sm text-ink/70">
+        <span>Forms</span>
+        <span class="tabular-nums">{{ forms_limit.used }} / {{ forms_limit.limit }}</span>
+      </div>
+      <div class="mt-1 h-2 w-full overflow-hidden rounded-full bg-line/40">
+        <div class="h-full rounded-full {% if forms_pct >= 90 %}bg-danger{% else %}bg-signal{% endif %}"
+             style="width: {{ forms_pct }}%"></div>
+      </div>
+    </div>
+    <div>
+      <div class="flex items-center justify-between text-sm text-ink/70">
+        <span>Submissions this month</span>
+        <span class="tabular-nums">{{ submissions_limit.used }} / {{ submissions_limit.limit }}</span>
+      </div>
+      <div class="mt-1 h-2 w-full overflow-hidden rounded-full bg-line/40">
+        <div class="h-full rounded-full {% if submissions_pct >= 90 %}bg-danger{% else %}bg-signal{% endif %}"
+             style="width: {{ submissions_pct }}%"></div>
+      </div>
+    </div>
   </div>
 
   {% if forms %}
-    <div class="mt-6 overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
-      <table class="min-w-full divide-y divide-slate-200 text-sm">
-        <thead class="bg-slate-50">
+    <div class="panel mt-6 hidden overflow-x-auto md:block">
+      <table class="min-w-full divide-y divide-line text-sm">
+        <thead>
           <tr>
-            <th scope="col" class="px-4 py-2 text-left font-medium text-slate-500">Name</th>
-            <th scope="col" class="px-4 py-2 text-left font-medium text-slate-500">Status</th>
-            <th scope="col" class="px-4 py-2 text-left font-medium text-slate-500">Ham</th>
-            <th scope="col" class="px-4 py-2 text-left font-medium text-slate-500">Spam</th>
-            <th scope="col" class="px-4 py-2 text-left font-medium text-slate-500">Ham this month</th>
-            <th scope="col" class="px-4 py-2 text-left font-medium text-slate-500">Endpoint</th>
-            <th scope="col" class="px-4 py-2 text-left font-medium text-slate-500">Created</th>
+            <th scope="col" class="px-4 py-2 text-left font-medium text-ink/70">Name</th>
+            <th scope="col" class="px-4 py-2 text-left font-medium text-ink/70">Status</th>
+            <th scope="col" class="px-4 py-2 text-left font-medium text-ink/70">Ham</th>
+            <th scope="col" class="px-4 py-2 text-left font-medium text-ink/70">Spam</th>
+            <th scope="col" class="px-4 py-2 text-left font-medium text-ink/70">Ham this month</th>
+            <th scope="col" class="px-4 py-2 text-left font-medium text-ink/70">Endpoint</th>
+            <th scope="col" class="px-4 py-2 text-left font-medium text-ink/70">Created</th>
             <th scope="col" class="px-4 py-2"><span class="sr-only">Actions</span></th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-slate-200">
+        <tbody class="divide-y divide-line">
           {% for form_obj in forms %}
             <tr>
               <td class="px-4 py-2">
                 <a href="{% url 'forms_app:detail' pk=form_obj.pk %}"
-                   class="rounded font-medium text-blue-600 hover:text-blue-700
-                          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+                   class="rounded font-medium text-signal-deep hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink">
                   {{ form_obj.name }}
                 </a>
               </td>
               <td class="px-4 py-2">
                 {% if form_obj.is_active %}
-                  <span class="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">Active</span>
+                  <span class="pill pill-good">Active</span>
                 {% else %}
-                  <span class="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">Inactive</span>
+                  <span class="pill pill-neutral">Inactive</span>
                 {% endif %}
               </td>
-              <td class="px-4 py-2 text-slate-700">{{ form_obj.ham_count }}</td>
-              <td class="px-4 py-2 text-slate-700">{{ form_obj.spam_count }}</td>
-              <td class="px-4 py-2 text-slate-700">{{ form_obj.ham_this_month }}</td>
-              <td class="px-4 py-2 text-slate-500"><code class="text-xs">{{ form_obj.endpoint_url }}</code></td>
-              <td class="px-4 py-2 text-slate-500">{{ form_obj.created_at|date:"Y-m-d" }}</td>
+              <td class="px-4 py-2 tabular-nums text-ink">{{ form_obj.ham_count }}</td>
+              <td class="px-4 py-2 tabular-nums text-ink">{{ form_obj.spam_count }}</td>
+              <td class="px-4 py-2 tabular-nums text-ink">{{ form_obj.ham_this_month }}</td>
+              <td class="px-4 py-2 text-ink/70"><code class="text-xs">{{ form_obj.endpoint_url }}</code></td>
+              <td class="px-4 py-2 tabular-nums text-ink/70">{{ form_obj.created_at|date:"Y-m-d" }}</td>
               <td class="px-4 py-2 text-right">
                 <a href="{% url 'dashboard:submission_list' pk=form_obj.pk %}"
-                   class="rounded font-medium text-blue-600 hover:text-blue-700
-                          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+                   class="rounded font-medium text-signal-deep hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink">
                   Submissions
                 </a>
               </td>
@@ -59,29 +77,47 @@
         </tbody>
       </table>
     </div>
+
+    <ul class="mt-6 space-y-3 md:hidden">
+      {% for form_obj in forms %}
+        <li class="panel px-4 py-3">
+          <div class="flex items-center justify-between gap-2">
+            <a href="{% url 'forms_app:detail' pk=form_obj.pk %}"
+               class="rounded font-medium text-signal-deep focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink">
+              {{ form_obj.name }}
+            </a>
+            {% if form_obj.is_active %}
+              <span class="pill pill-good shrink-0">Active</span>
+            {% else %}
+              <span class="pill pill-neutral shrink-0">Inactive</span>
+            {% endif %}
+          </div>
+          <p class="mt-1 tabular-nums text-sm text-ink/70">
+            Ham {{ form_obj.ham_count }} &middot; Spam {{ form_obj.spam_count }} &middot; Ham this month {{ form_obj.ham_this_month }}
+          </p>
+          <a href="{% url 'dashboard:submission_list' pk=form_obj.pk %}"
+             class="mt-2 inline-block rounded text-sm font-medium text-signal-deep focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink">
+            Submissions
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+
     {% if forms_limit.allowed %}
-      <p class="mt-4">
-        <a href="{% url 'forms_app:create' %}"
-           class="rounded font-medium text-blue-600 hover:text-blue-700 focus-visible:outline-none
-                  focus-visible:ring-2 focus-visible:ring-blue-500">
-          + New form
-        </a>
-      </p>
+      <a href="{% url 'forms_app:create' %}" class="btn btn-primary mt-4">
+        + New form
+      </a>
     {% else %}
-      <p class="mt-4 text-slate-600">You've reached your plan's limit of {{ forms_limit.limit }} active forms.</p>
+      <p class="mt-4 text-ink/70">You've reached your plan's limit of {{ forms_limit.limit }} active forms.</p>
     {% endif %}
   {% else %}
-    <p class="mt-6 text-slate-600">You haven't created any forms yet.</p>
+    <p class="mt-6 text-ink/70">You haven't created any forms yet.</p>
     {% if forms_limit.allowed %}
-      <p class="mt-2">
-        <a href="{% url 'forms_app:create' %}"
-           class="rounded font-medium text-blue-600 hover:text-blue-700 focus-visible:outline-none
-                  focus-visible:ring-2 focus-visible:ring-blue-500">
-          Create your first form
-        </a>
-      </p>
+      <a href="{% url 'forms_app:create' %}" class="btn btn-primary mt-4">
+        Create your first form
+      </a>
     {% else %}
-      <p class="mt-2 text-slate-600">You've reached your plan's limit of {{ forms_limit.limit }} active forms.</p>
+      <p class="mt-2 text-ink/70">You've reached your plan's limit of {{ forms_limit.limit }} active forms.</p>
     {% endif %}
   {% endif %}
 {% endblock %}

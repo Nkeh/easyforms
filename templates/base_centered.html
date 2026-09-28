@@ -1,0 +1,25 @@
+{% extends "_base_html.html" %}
+{% load static %}
+
+{% block body %}
+  <a href="#main-content"
+     class="sr-only focus:not-sr-only focus:fixed focus:left-2 focus:top-2 focus:z-50
+            focus:rounded focus:bg-white focus:px-3 focus:py-2
+            focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink">
+    Skip to content
+  </a>
+
+  {% include "_messages.html" %}
+
+  <div class="flex min-h-full flex-col items-center justify-center px-4 py-12">
+    <a href="{% url 'dashboard:home' %}"
+       class="mb-6 rounded text-lg font-semibold text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink">
+      Easyforms
+    </a>
+    <main id="main-content" class="panel w-full max-w-sm p-8">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+  <script src="{% static 'js/app.js' %}" defer></script>
+{% endblock %}

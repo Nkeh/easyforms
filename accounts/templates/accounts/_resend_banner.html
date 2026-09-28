@@ -1,10 +1,9 @@
-<div class="mb-4 flex items-center justify-between rounded-md border border-yellow-200 bg-yellow-50 px-4 py-2 text-sm text-yellow-800">
+<div class="mb-4 flex items-center justify-between rounded border border-line bg-white px-4 py-2 text-sm text-ink">
   <p>Please verify your email address.</p>
   <form method="post" action="{% url 'accounts:resend_verification' %}">
     {% csrf_token %}
     <button type="submit"
-            class="rounded font-medium text-yellow-900 underline hover:text-yellow-950
-                   focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+            class="rounded font-medium text-signal-deep underline hover:no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink">
       Resend verification email
     </button>
   </form>

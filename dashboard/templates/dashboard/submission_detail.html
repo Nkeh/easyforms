@@ -1,75 +1,73 @@
 {% extends "base.html" %}
 
-{% block title %}Submission — {{ form_obj.name }} — EasyForms{% endblock %}
+{% block title %}Submission — {{ form_obj.name }} — Easyforms{% endblock %}
 
 {% block content %}
-  <div class="flex items-center justify-between">
-    <h1 class="text-2xl font-semibold text-slate-900">Submission</h1>
+  <div class="flex items-center justify-between gap-4">
+    <h1 class="text-2xl font-semibold text-ink">Submission</h1>
     <a href="{% url 'dashboard:submission_list' pk=form_obj.pk %}"
-       class="rounded font-medium text-blue-600 hover:text-blue-700 focus-visible:outline-none
-              focus-visible:ring-2 focus-visible:ring-blue-500">
+       class="rounded font-medium text-signal-deep hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink">
       Back to submissions
     </a>
   </div>
 
-  <h2 class="mt-6 text-lg font-semibold text-slate-900">Metadata</h2>
-  <dl class="mt-2 divide-y divide-slate-200 rounded-lg border border-slate-200 bg-white shadow-sm">
-    <div class="grid grid-cols-3 gap-4 px-4 py-3">
-      <dt class="text-sm font-medium text-slate-500">Time</dt>
-      <dd class="col-span-2 text-sm text-slate-900">{{ submission.created_at }}</dd>
+  <h2 class="mt-6 text-lg font-semibold text-ink">Metadata</h2>
+  <dl class="panel mt-2 divide-y divide-line">
+    <div class="kv-row">
+      <dt class="kv-label">Time</dt>
+      <dd class="kv-value tabular-nums">{{ submission.created_at }}</dd>
     </div>
-    <div class="grid grid-cols-3 gap-4 px-4 py-3">
-      <dt class="text-sm font-medium text-slate-500">Status</dt>
-      <dd class="col-span-2 text-sm text-slate-900">
+    <div class="kv-row">
+      <dt class="kv-label">Status</dt>
+      <dd class="kv-value">
         {% if submission.status == "ham" %}
-          <span class="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">Ham</span>
+          <span class="pill pill-good">Ham</span>
         {% else %}
-          <span class="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">Spam</span>
+          <span class="pill pill-bad">Spam</span>
         {% endif %}
       </dd>
     </div>
-    <div class="grid grid-cols-3 gap-4 px-4 py-3">
-      <dt class="text-sm font-medium text-slate-500">Spam score</dt>
-      <dd class="col-span-2 text-sm text-slate-900">{{ submission.spam_score|default_if_none:"—" }}</dd>
+    <div class="kv-row">
+      <dt class="kv-label">Spam score</dt>
+      <dd class="kv-value tabular-nums">{{ submission.spam_score|default_if_none:"—" }}</dd>
     </div>
-    <div class="grid grid-cols-3 gap-4 px-4 py-3">
-      <dt class="text-sm font-medium text-slate-500">Signals</dt>
-      <dd class="col-span-2 text-sm text-slate-900">{{ submission.spam_signals|join:", "|default:"—" }}</dd>
+    <div class="kv-row">
+      <dt class="kv-label">Signals</dt>
+      <dd class="kv-value">{{ submission.spam_signals|join:", "|default:"—" }}</dd>
     </div>
-    <div class="grid grid-cols-3 gap-4 px-4 py-3">
-      <dt class="text-sm font-medium text-slate-500">Model version</dt>
-      <dd class="col-span-2 text-sm text-slate-900">{{ submission.model_version.version|default:"—" }}</dd>
+    <div class="kv-row">
+      <dt class="kv-label">Model version</dt>
+      <dd class="kv-value">{{ submission.model_version.version|default:"—" }}</dd>
     </div>
-    <div class="grid grid-cols-3 gap-4 px-4 py-3">
-      <dt class="text-sm font-medium text-slate-500">Notification</dt>
-      <dd class="col-span-2 text-sm text-slate-900">
+    <div class="kv-row">
+      <dt class="kv-label">Notification</dt>
+      <dd class="kv-value">
         {% if submission.notification_status == "failed" %}
-          <span class="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">Failed</span>
+          <span class="pill pill-bad">Failed</span>
         {% elif submission.notification_status == "sent" %}
-          <span class="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">Sent</span>
+          <span class="pill pill-good">Sent</span>
         {% elif submission.notification_status == "pending" %}
-          <span class="inline-flex rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800">Pending</span>
+          <span class="pill pill-neutral">Pending</span>
         {% else %}
-          <span class="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">Skipped</span>
+          <span class="pill pill-neutral">Skipped</span>
         {% endif %}
       </dd>
     </div>
   </dl>
 
-  <h2 class="mt-8 text-lg font-semibold text-slate-900">Submitted fields</h2>
-  <dl class="mt-2 divide-y divide-slate-200 rounded-lg border border-slate-200 bg-white shadow-sm">
+  <h2 class="mt-8 text-lg font-semibold text-ink">Submitted fields</h2>
+  <dl class="panel mt-2 divide-y divide-line">
     {% for key, value in submission.payload.items %}
-      <div class="grid grid-cols-3 gap-4 px-4 py-3">
-        <dt class="text-sm font-medium text-slate-500">{{ key }}</dt>
-        <dd class="col-span-2 whitespace-pre-wrap break-words text-sm text-slate-900">{{ value|linebreaksbr }}</dd>
+      <div class="kv-row">
+        <dt class="kv-label">{{ key }}</dt>
+        <dd class="kv-value whitespace-pre-wrap">{{ value|linebreaksbr }}</dd>
       </div>
     {% endfor %}
   </dl>
 
   <div class="mt-6">
     <a href="{% url 'dashboard:submission_delete' pk=form_obj.pk submission_pk=submission.pk %}"
-       class="rounded-md border border-red-300 bg-white px-3 py-1.5 text-sm font-medium text-red-700
-              hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500">
+       class="btn border border-danger bg-white text-danger hover:bg-danger-soft">
       Delete submission
     </a>
   </div>

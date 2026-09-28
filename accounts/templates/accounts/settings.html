@@ -1,29 +1,29 @@
 {% extends "base.html" %}
 
-{% block title %}Settings — EasyForms{% endblock %}
+{% block title %}Settings — Easyforms{% endblock %}
 
 {% block content %}
-  <h1 class="text-2xl font-semibold text-slate-900">Settings</h1>
-  <dl class="mt-6 divide-y divide-slate-200 rounded-lg border border-slate-200 bg-white shadow-sm">
-    <div class="grid grid-cols-3 gap-4 px-4 py-3">
-      <dt class="text-sm font-medium text-slate-500">Email</dt>
-      <dd class="col-span-2 text-sm text-slate-900">{{ user.email }}</dd>
+  <h1 class="text-2xl font-semibold text-ink">Settings</h1>
+  <dl class="panel mt-6 divide-y divide-line">
+    <div class="kv-row">
+      <dt class="kv-label">Email</dt>
+      <dd class="kv-value">{{ user.email }}</dd>
     </div>
-    <div class="grid grid-cols-3 gap-4 px-4 py-3">
-      <dt class="text-sm font-medium text-slate-500">Verified</dt>
-      <dd class="col-span-2 text-sm text-slate-900">{{ user.is_verified|yesno:"Yes,No" }}</dd>
+    <div class="kv-row">
+      <dt class="kv-label">Verified</dt>
+      <dd class="kv-value">{{ user.is_verified|yesno:"Yes,No" }}</dd>
     </div>
-    <div class="grid grid-cols-3 gap-4 px-4 py-3">
-      <dt class="text-sm font-medium text-slate-500">Plan</dt>
-      <dd class="col-span-2 text-sm text-slate-900">{{ account.plan }}</dd>
+    <div class="kv-row">
+      <dt class="kv-label">Plan</dt>
+      <dd class="kv-value">{{ account.plan }}</dd>
     </div>
-    <div class="grid grid-cols-3 gap-4 px-4 py-3">
-      <dt class="text-sm font-medium text-slate-500">Active forms</dt>
-      <dd class="col-span-2 text-sm text-slate-900">{{ forms_limit.used }} / {{ forms_limit.limit }}</dd>
+    <div class="kv-row">
+      <dt class="kv-label">Active forms</dt>
+      <dd class="kv-value tabular-nums">{{ forms_limit.used }} / {{ forms_limit.limit }}</dd>
     </div>
-    <div class="grid grid-cols-3 gap-4 px-4 py-3">
-      <dt class="text-sm font-medium text-slate-500">Submissions this month</dt>
-      <dd class="col-span-2 text-sm text-slate-900">
+    <div class="kv-row">
+      <dt class="kv-label">Submissions this month</dt>
+      <dd class="kv-value tabular-nums">
         {{ submissions_limit.used }} / {{ submissions_limit.limit }}
       </dd>
     </div>

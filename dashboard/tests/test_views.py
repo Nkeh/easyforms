@@ -54,7 +54,7 @@ def test_dashboard_shows_usage_and_create_link_below_limit(client):
     response = client.get("/dashboard")
     content = response.content.decode()
 
-    assert "1 / 3 forms used" in content
+    assert '<span class="tabular-nums">1 / 3</span>' in content
     assert "forms/new" in content
 
 
@@ -67,7 +67,7 @@ def test_dashboard_hides_create_link_at_limit(client):
     response = client.get("/dashboard")
     content = response.content.decode()
 
-    assert "3 / 3 forms used" in content
+    assert '<span class="tabular-nums">3 / 3</span>' in content
     assert "forms/new" not in content
     assert "reached your plan's limit of 3 active forms" in content
 

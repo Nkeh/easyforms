@@ -1,0 +1,14 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {% block robots %}{% endblock %}
+  <link rel="preload" href="{% static 'fonts/schibsted-grotesk/SchibstedGrotesk-Variable-latin.woff2' %}" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <title>{% block title %}Easyforms{% endblock %}</title>
+</head>
+<body class="h-full bg-paper font-sans text-ink antialiased">
+  {% block body %}{% endblock %}
+</body>
+</html>
