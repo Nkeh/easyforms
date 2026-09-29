@@ -1,0 +1,45 @@
+{% with submission=row.submission %}
+  <li class="submission-row flex items-center border-l-[3px] {% if submission.status == 'ham' %}border-signal{% else %}border-danger{% endif %}">
+    <a href="{% url 'dashboard:submission_detail' pk=form_obj.pk submission_pk=submission.pk %}"
+       class="flex min-w-0 flex-1 items-center justify-between gap-4 px-4 py-3 transition-colors duration-150 ease-out hover:bg-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink">
+      <div class="min-w-0 flex-1">
+        <p class="truncate text-sm font-medium text-ink">{{ row.preview }}</p>
+        <p class="tabular-nums text-xs text-ink/70">
+          {{ submission.created_at|date:"Y-m-d H:i" }}{% if submission.spam_signals %} &middot; {{ submission.spam_signals|join:", " }}{% endif %}
+        </p>
+      </div>
+      <div class="shrink-0 flex items-center gap-2">
+        {% if submission.status == "ham" and "model_shadow" in submission.spam_signals %}
+          <span class="pill pill-warn">Possible spam</span>
+        {% endif %}
+        {% if submission.notification_status == "failed" %}
+          <span class="pill pill-bad">&#9888; Failed</span>
+        {% elif submission.notification_status == "sent" %}
+          <span class="pill pill-good">Sent</span>
+        {% elif submission.notification_status == "pending" %}
+          <span class="pill pill-neutral">Pending</span>
+        {% else %}
+          <span class="pill pill-neutral">Skipped</span>
+        {% endif %}
+      </div>
+    </a>
+    <form method="post"
+          action="{% url 'dashboard:submission_label' pk=form_obj.pk submission_pk=submission.pk %}"
+          hx-post="{% url 'dashboard:submission_label' pk=form_obj.pk submission_pk=submission.pk %}"
+          hx-target="closest li"
+          hx-swap="outerHTML swap:150ms"
+          class="shrink-0 px-4">
+      {% csrf_token %}
+      <input type="hidden" name="fragment" value="row">
+      <input type="hidden" name="filter" value="{{ status }}">
+      <input type="hidden" name="next" value="{{ request.get_full_path }}">
+      {% if submission.status == "spam" %}
+        <input type="hidden" name="status" value="ham">
+        <button type="submit" class="btn btn-secondary">Not spam</button>
+      {% else %}
+        <input type="hidden" name="status" value="spam">
+        <button type="submit" class="btn btn-secondary">Mark as spam</button>
+      {% endif %}
+    </form>
+  </li>
+{% endwith %}

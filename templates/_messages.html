@@ -1,6 +1,10 @@
-{% if messages %}
-  <div id="toast-container"
-       class="pointer-events-none fixed inset-x-0 top-0 z-50 flex flex-col items-center gap-2 p-4 sm:items-end">
+{% comment %}
+Always rendered (even with no messages queued) so HTMX responses have a
+target for out-of-band toast inserts — see dashboard/_toast_oob.html.
+{% endcomment %}
+<div id="toast-container"
+     class="pointer-events-none fixed inset-x-0 top-0 z-50 flex flex-col items-center gap-2 p-4 sm:items-end">
+  {% if messages %}
     {% for message in messages %}
       <div class="toast pointer-events-auto w-full max-w-sm rounded border px-4 py-3 text-sm
           {% if 'error' in message.tags %}border-danger bg-danger-soft text-danger
@@ -18,5 +22,5 @@
         </div>
       </div>
     {% endfor %}
-  </div>
-{% endif %}
+  {% endif %}
+</div>

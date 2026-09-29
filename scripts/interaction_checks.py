@@ -101,6 +101,31 @@ def check_htmx_filter_swap(page, base_url: str, form_id: str) -> None:
     )
 
 
+def check_label_flip_and_undo(page, base_url: str, form_id: str, submission_id: str) -> None:
+    page.goto(f"{base_url}/forms/{form_id}/submissions/{submission_id}")
+    page.click('#submission-status button[type="submit"]')
+    page.wait_for_selector(".toast")
+    flipped_pill = page.eval_on_selector(
+        "#submission-status .pill:not(.pill-warn)", "el => el.textContent.trim()"
+    )
+    check(
+        "Label flip: status pill updates and a toast with Undo appears",
+        flipped_pill == "Spam" and page.is_visible(".toast >> text=Undo"),
+        f"pill={flipped_pill!r}",
+    )
+
+    page.click(".toast >> text=Undo")
+    page.wait_for_timeout(300)
+    restored_pill = page.eval_on_selector(
+        "#submission-status .pill:not(.pill-warn)", "el => el.textContent.trim()"
+    )
+    check(
+        "Label flip: Undo restores the original status",
+        restored_pill == "Ham",
+        f"pill={restored_pill!r}",
+    )
+
+
 def check_copy_button(page, base_url: str, form_id: str) -> None:
     page.goto(f"{base_url}/forms/{form_id}")
     page.click('button[data-copy-target="endpoint-url"]')
@@ -123,6 +148,7 @@ def main() -> None:
 
     seed = json.loads(Path(args.seed_file).read_text())
     form_id = seed["form_with_data_id"]
+    possible_spam_id = seed["sample_possible_spam_id"]
 
     with sync_playwright() as p:
         browser = p.chromium.launch()
@@ -135,6 +161,7 @@ def main() -> None:
         check_focus_visible(page, f"{args.base_url}/forms/{form_id}", "form detail")
         check_htmx_filter_swap(page, args.base_url, form_id)
         check_copy_button(page, args.base_url, form_id)
+        check_label_flip_and_undo(page, args.base_url, form_id, possible_spam_id)
 
         browser.close()
 

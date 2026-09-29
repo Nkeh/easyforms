@@ -1,39 +1,52 @@
 (function () {
   "use strict";
 
-  function initToasts() {
-    var toasts = document.querySelectorAll(".toast");
-    if (!toasts.length) return;
+  function activateToast(toast) {
+    if (toast.dataset.activated) return;
+    toast.dataset.activated = "true";
 
-    toasts.forEach(function (toast) {
-      // Two rAFs so the initial (hidden) state is painted before the
-      // visible class is added — otherwise the browser may coalesce both
-      // states into one frame and skip the transition.
+    // Two rAFs so the initial (hidden) state is painted before the
+    // visible class is added — otherwise the browser may coalesce both
+    // states into one frame and skip the transition.
+    requestAnimationFrame(function () {
       requestAnimationFrame(function () {
-        requestAnimationFrame(function () {
-          toast.classList.add("toast-visible");
-        });
+        toast.classList.add("toast-visible");
       });
+    });
 
-      var dismiss = function () {
-        if (toast.dataset.dismissing) return;
-        toast.dataset.dismissing = "true";
-        toast.classList.remove("toast-visible");
-        toast.classList.add("toast-leaving");
-        window.setTimeout(function () {
-          toast.remove();
-        }, 220);
-      };
+    var dismiss = function () {
+      if (toast.dataset.dismissing) return;
+      toast.dataset.dismissing = "true";
+      toast.classList.remove("toast-visible");
+      toast.classList.add("toast-leaving");
+      window.setTimeout(function () {
+        toast.remove();
+      }, 220);
+    };
 
-      var timer = window.setTimeout(dismiss, 4000);
+    var timer = window.setTimeout(dismiss, 4000);
 
-      var button = toast.querySelector(".toast-dismiss");
-      if (button) {
-        button.addEventListener("click", function () {
-          window.clearTimeout(timer);
-          dismiss();
-        });
-      }
+    var button = toast.querySelector(".toast-dismiss");
+    if (button) {
+      button.addEventListener("click", function () {
+        window.clearTimeout(timer);
+        dismiss();
+      });
+    }
+  }
+
+  function initToasts() {
+    document.querySelectorAll(".toast").forEach(activateToast);
+  }
+
+  function initHtmxToasts() {
+    // Toasts injected via hx-swap-oob (dashboard/_toast_oob.html) arrive
+    // outside the normal DOMContentLoaded pass. htmx:afterSwap also fires
+    // once OOB swaps have settled, so rescan rather than rely on the exact
+    // shape of the OOB event detail (which container/inserted-node it
+    // points to differs by swap style).
+    document.body.addEventListener("htmx:afterSwap", function () {
+      document.querySelectorAll("#toast-container .toast").forEach(activateToast);
     });
   }
 
@@ -113,6 +126,7 @@
 
   document.addEventListener("DOMContentLoaded", function () {
     initToasts();
+    initHtmxToasts();
     initMobileMenu();
     initCopyButtons();
     initFilterTabs();

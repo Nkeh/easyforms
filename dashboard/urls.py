@@ -18,4 +18,9 @@ urlpatterns = [
         views.submission_delete,
         name="submission_delete",
     ),
+    path(
+        "forms/<uuid:pk>/submissions/<uuid:submission_pk>/label",
+        views.submission_label,
+        name="submission_label",
+    ),
 ]

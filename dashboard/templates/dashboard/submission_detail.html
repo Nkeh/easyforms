@@ -17,16 +17,7 @@
       <dt class="kv-label">Time</dt>
       <dd class="kv-value tabular-nums">{{ submission.created_at }}</dd>
     </div>
-    <div class="kv-row">
-      <dt class="kv-label">Status</dt>
-      <dd class="kv-value">
-        {% if submission.status == "ham" %}
-          <span class="pill pill-good">Ham</span>
-        {% else %}
-          <span class="pill pill-bad">Spam</span>
-        {% endif %}
-      </dd>
-    </div>
+    {% include "dashboard/_submission_status.html" %}
     <div class="kv-row">
       <dt class="kv-label">Spam score</dt>
       <dd class="kv-value tabular-nums">{{ submission.spam_score|default_if_none:"—" }}</dd>

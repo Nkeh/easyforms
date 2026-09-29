@@ -1,0 +1,33 @@
+<div id="submission-status" class="kv-row">
+  <dt class="kv-label">Status</dt>
+  <dd class="kv-value flex flex-wrap items-center gap-2">
+    {% if submission.status == "ham" %}
+      <span class="pill pill-good">Ham</span>
+    {% else %}
+      <span class="pill pill-bad">Spam</span>
+    {% endif %}
+    {% if submission.status == "ham" and "model_shadow" in submission.spam_signals %}
+      <span class="pill pill-warn">Possible spam</span>
+    {% endif %}
+    {% if submission.corrected %}
+      <span class="pill pill-neutral">Corrected</span>
+    {% endif %}
+    <form method="post"
+          action="{% url 'dashboard:submission_label' pk=form_obj.pk submission_pk=submission.pk %}"
+          hx-post="{% url 'dashboard:submission_label' pk=form_obj.pk submission_pk=submission.pk %}"
+          hx-target="#submission-status"
+          hx-swap="outerHTML"
+          class="ml-auto">
+      {% csrf_token %}
+      <input type="hidden" name="fragment" value="status">
+      <input type="hidden" name="next" value="{{ request.get_full_path }}">
+      {% if submission.status == "spam" %}
+        <input type="hidden" name="status" value="ham">
+        <button type="submit" class="btn btn-secondary">Not spam</button>
+      {% else %}
+        <input type="hidden" name="status" value="spam">
+        <button type="submit" class="btn btn-secondary">Mark as spam</button>
+      {% endif %}
+    </form>
+  </dd>
+</div>

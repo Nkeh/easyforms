@@ -18,6 +18,7 @@ def _login(client):
 def _make_submission(form_obj, **kwargs):
     kwargs.setdefault("payload", {})
     kwargs.setdefault("status", Submission.Status.HAM)
+    kwargs.setdefault("original_status", kwargs["status"])
     kwargs.setdefault("source_ip_hash", "a" * 64)
     return Submission.objects.create(form=form_obj, **kwargs)
 
@@ -57,6 +58,23 @@ def test_status_filter_respected_in_rows_and_header(client):
     assert len(rows) == 2
     assert "ham" in rows[1]
     assert "ham-value" in rows[1]
+
+
+def test_possible_spam_filter_matches_only_shadow_flagged_ham(client):
+    user = _login(client)
+    form_obj = Form.objects.create(account=user.account, name="My Form")
+    _make_submission(
+        form_obj, status=Submission.Status.HAM, spam_signals=["model_shadow"], payload={"z": "1"}
+    )
+    _make_submission(form_obj, status=Submission.Status.HAM, payload={"w": "2"})
+    _make_submission(form_obj, status=Submission.Status.SPAM, payload={"v": "3"})
+
+    response = client.get(_csv_url(form_obj), {"status": "possible_spam"})
+    text = _content(response).decode("utf-8-sig")
+    rows = list(csv.reader(io.StringIO(text)))
+
+    assert rows[0] == ["id", "created_at", "status", "spam_score", "z"]
+    assert len(rows) == 2
 
 
 def test_csv_injection_cell_is_prefixed(client):

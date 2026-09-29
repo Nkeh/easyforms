@@ -1,0 +1,46 @@
+{% comment %}
+htmx's position-based OOB swap ("beforeend:#selector") inserts the CONTENT
+of the hx-swap-oob-marked element into the selector-matched target — the
+marked element's own tag/attributes are just a carrier, never inserted
+themselves (this mirrors htmx's own canonical "append to a list" example,
+which id-matches an element to itself for the same reason). So the OOB
+marker has to sit on a `#toast-container` stand-in, with the real `.toast`
+element nested inside it as the content that actually lands in the page.
+{% endcomment %}
+<div id="toast-container" hx-swap-oob="beforeend">
+  <div class="toast pointer-events-auto w-full max-w-sm rounded border border-signal-deep bg-signal/10 px-4 py-3 text-sm text-signal-deep"
+       role="status"
+       data-tags="success">
+    <div class="flex items-start justify-between gap-3">
+      <div class="flex-1">
+        {{ message }}
+        <form method="post"
+              action="{% url 'dashboard:submission_label' pk=form_obj.pk submission_pk=submission.pk %}"
+              class="inline"
+              hx-post="{% url 'dashboard:submission_label' pk=form_obj.pk submission_pk=submission.pk %}"
+              {% if undo_fragment == "panel" %}
+                hx-select="#submissions-panel"
+                hx-target="#submissions-panel"
+                hx-swap="outerHTML swap:150ms settle:150ms"
+              {% else %}
+                hx-target="#submission-status"
+                hx-swap="outerHTML"
+              {% endif %}>
+          {% csrf_token %}
+          <input type="hidden" name="status" value="{{ undo_status }}">
+          <input type="hidden" name="fragment" value="{{ undo_fragment }}">
+          <input type="hidden" name="filter" value="{{ list_filter }}">
+          <button type="submit"
+                  class="ml-2 font-semibold underline decoration-2 underline-offset-2 hover:no-underline">
+            Undo
+          </button>
+        </form>
+      </div>
+      <button type="button"
+              class="toast-dismiss shrink-0 rounded text-signal-deep/70 transition-colors duration-150 ease-out hover:text-signal-deep focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+              aria-label="Dismiss">
+        &times;
+      </button>
+    </div>
+  </div>
+</div>

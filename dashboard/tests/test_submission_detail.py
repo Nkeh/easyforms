@@ -15,6 +15,7 @@ def _login(client):
 def _make_submission(form_obj, **kwargs):
     kwargs.setdefault("payload", {})
     kwargs.setdefault("status", Submission.Status.HAM)
+    kwargs.setdefault("original_status", kwargs["status"])
     kwargs.setdefault("source_ip_hash", "a" * 64)
     return Submission.objects.create(form=form_obj, **kwargs)
 
@@ -85,6 +86,29 @@ def test_submission_from_a_different_form_of_same_account_404s(client):
     response = client.get(_detail_url(form_a, submission_on_b))
 
     assert response.status_code == 404
+
+
+def test_possible_spam_pill_renders_for_shadow_flagged_ham(client):
+    user = _login(client)
+    form_obj = Form.objects.create(account=user.account, name="My Form")
+    submission = _make_submission(form_obj, spam_signals=["model_shadow"])
+
+    response = client.get(_detail_url(form_obj, submission))
+
+    assert '<span class="pill pill-warn">Possible spam</span>' in response.content.decode()
+
+
+def test_flip_button_label_matches_current_status(client):
+    user = _login(client)
+    form_obj = Form.objects.create(account=user.account, name="My Form")
+    ham_submission = _make_submission(form_obj, status=Submission.Status.HAM)
+    spam_submission = _make_submission(form_obj, status=Submission.Status.SPAM)
+
+    ham_response = client.get(_detail_url(form_obj, ham_submission))
+    spam_response = client.get(_detail_url(form_obj, spam_submission))
+
+    assert "Mark as spam" in ham_response.content.decode()
+    assert "Not spam" in spam_response.content.decode()
 
 
 def test_delete_get_renders_confirm_and_does_not_delete(client):

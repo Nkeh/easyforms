@@ -26,6 +26,8 @@ module.exports = {
         line: "#D3DAE1",
         danger: "#B42318",
         "danger-soft": "#FDECEA",
+        warn: "#B45309",
+        "warn-soft": "#FEF3C7",
       },
     },
   },

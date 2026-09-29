@@ -18,6 +18,7 @@ def _login(client):
 def _make_submission(form_obj, **kwargs):
     kwargs.setdefault("payload", {})
     kwargs.setdefault("status", Submission.Status.HAM)
+    kwargs.setdefault("original_status", kwargs["status"])
     kwargs.setdefault("source_ip_hash", "a" * 64)
     return Submission.objects.create(form=form_obj, **kwargs)
 
@@ -103,3 +104,36 @@ def test_failed_notification_status_is_highlighted(client):
     content = response.content.decode()
 
     assert '<span class="pill pill-bad">&#9888; Failed</span>' in content
+
+
+def test_possible_spam_filter_only_matches_shadow_flagged_ham(client):
+    user = _login(client)
+    form_obj = Form.objects.create(account=user.account, name="My Form")
+    shadow = _make_submission(form_obj, spam_signals=["model_shadow"])
+    _make_submission(form_obj, status=Submission.Status.HAM)
+    _make_submission(form_obj, status=Submission.Status.SPAM, spam_signals=["honeypot"])
+
+    response = client.get(f"/forms/{form_obj.pk}/submissions", {"status": "possible_spam"})
+
+    ids = {row["submission"].id for row in response.context["rows"]}
+    assert ids == {shadow.id}
+
+
+def test_possible_spam_pill_renders_for_shadow_flagged_ham(client):
+    user = _login(client)
+    form_obj = Form.objects.create(account=user.account, name="My Form")
+    _make_submission(form_obj, spam_signals=["model_shadow"])
+
+    response = client.get(f"/forms/{form_obj.pk}/submissions")
+
+    assert '<span class="pill pill-warn">Possible spam</span>' in response.content.decode()
+
+
+def test_possible_spam_pill_absent_for_plain_ham(client):
+    user = _login(client)
+    form_obj = Form.objects.create(account=user.account, name="My Form")
+    _make_submission(form_obj, status=Submission.Status.HAM)
+
+    response = client.get(f"/forms/{form_obj.pk}/submissions")
+
+    assert '<span class="pill pill-warn">Possible spam</span>' not in response.content.decode()

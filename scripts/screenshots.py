@@ -82,6 +82,10 @@ def main() -> None:
             ("submissions-ham", f"{args.base_url}/forms/{form_id}/submissions?status=ham"),
             ("submissions-spam", f"{args.base_url}/forms/{form_id}/submissions?status=spam"),
             (
+                "submissions-possible-spam",
+                f"{args.base_url}/forms/{form_id}/submissions?status=possible_spam",
+            ),
+            (
                 "submissions-empty",
                 f"{args.base_url}/forms/{empty_form_id}/submissions?status=all",
             ),
