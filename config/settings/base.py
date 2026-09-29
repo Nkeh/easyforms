@@ -298,3 +298,10 @@ if SPAM_MODEL_MODE not in {"auto", "enforce", "shadow"}:
     raise ImproperlyConfigured(
         f"SPAM_MODEL_MODE must be one of auto/enforce/shadow, got {SPAM_MODEL_MODE!r}"
     )
+
+# Day 12 monitoring (SRS section 7 — feedback loop). spam_report logs a
+# WARNING when the false-positive rate among spam-labelled rows (in its
+# --days window) exceeds SPAM_FP_ALERT_RATE, but only once there are at
+# least SPAM_ALERT_MIN_ROWS spam-labelled rows to make the rate meaningful.
+SPAM_FP_ALERT_RATE = env.float("SPAM_FP_ALERT_RATE", default=0.02)
+SPAM_ALERT_MIN_ROWS = env.int("SPAM_ALERT_MIN_ROWS", default=50)
