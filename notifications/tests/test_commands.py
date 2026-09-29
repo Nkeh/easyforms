@@ -21,10 +21,12 @@ def _make_account_with_verified_user():
 
 def _make_submission(account, age, **kwargs):
     form = Form.objects.create(account=account, name="Contact form")
+    status = kwargs.pop("status", Submission.Status.HAM)
     submission = Submission.objects.create(
         form=form,
         payload={"name": "Jane"},
-        status=kwargs.pop("status", Submission.Status.HAM),
+        status=status,
+        original_status=status,
         source_ip_hash="a" * 64,
         notification_status=kwargs.pop(
             "notification_status", Submission.NotificationStatus.PENDING

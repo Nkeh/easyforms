@@ -18,6 +18,7 @@ def _make_submission(**kwargs):
         form=form,
         payload=payload,
         status=Submission.Status.HAM,
+        original_status=Submission.Status.HAM,
         spam_signals=signals,
         source_ip_hash="a" * 64,
         **kwargs,

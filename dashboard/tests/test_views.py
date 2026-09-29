@@ -10,7 +10,11 @@ pytestmark = pytest.mark.django_db
 
 def _make_submission(form_obj, status=Submission.Status.HAM):
     return Submission.objects.create(
-        form=form_obj, payload={}, status=status, source_ip_hash="a" * 64
+        form=form_obj,
+        payload={},
+        status=status,
+        original_status=status,
+        source_ip_hash="a" * 64,
     )
 
 

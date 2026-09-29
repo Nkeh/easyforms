@@ -6,6 +6,7 @@ from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
 from accounts.models import Account
+from billing.plans import retention_days_for
 
 
 def generate_token() -> str:
@@ -42,6 +43,10 @@ class Form(models.Model):
     def endpoint_url(self) -> str:
         return f"{settings.PUBLIC_BASE_URL}/f/{self.token}"
 
+    @property
+    def effective_retention_days(self) -> int:
+        return self.retention_days or retention_days_for(self.account)
+
 
 class Submission(models.Model):
     class Status(models.TextChoices):
@@ -63,7 +68,12 @@ class Submission(models.Model):
     # populated even in heuristics-only mode (fast_submit is observability-only there)
     spam_signals = models.JSONField(default=list, blank=True)
     status = models.CharField(max_length=10, choices=Status.choices)
+    # the system's decision at ingest time; never changed after creation
+    # (FR-4.4 feedback loop needs the pre-correction label preserved)
+    original_status = models.CharField(max_length=10, choices=Status.choices)
+    # corrected = status != original_status, maintained on every label flip
     corrected = models.BooleanField(default=False)
+    corrected_at = models.DateTimeField(null=True, blank=True)
     source_ip_hash = models.CharField(max_length=64)
     model_version = models.ForeignKey(
         "spam.ModelVersion",

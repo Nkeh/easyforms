@@ -50,6 +50,19 @@ def test_endpoint_url_is_built_from_public_base_url():
     assert form.endpoint_url == f"http://example.test/f/{form.token}"
 
 
+def test_effective_retention_days_falls_back_to_plan_when_unset():
+    form = _make_form()
+
+    assert form.retention_days is None
+    assert form.effective_retention_days == 30
+
+
+def test_effective_retention_days_uses_form_override():
+    form = _make_form(retention_days=7)
+
+    assert form.effective_retention_days == 7
+
+
 def test_deleting_account_cascades_to_forms_and_submissions():
     account = Account.objects.create(name="Acme Inc")
     form = _make_form(account=account)
@@ -57,6 +70,7 @@ def test_deleting_account_cascades_to_forms_and_submissions():
         form=form,
         payload={"name": "Jane"},
         status=Submission.Status.HAM,
+        original_status=Submission.Status.HAM,
         source_ip_hash="a" * 64,
     )
 

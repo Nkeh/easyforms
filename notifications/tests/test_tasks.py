@@ -28,6 +28,7 @@ def _make_submission(account=None, **kwargs):
         form=form,
         payload=kwargs.pop("payload", {"name": "Jane"}),
         status=Submission.Status.HAM,
+        original_status=Submission.Status.HAM,
         source_ip_hash="a" * 64,
         notification_status=kwargs.pop(
             "notification_status", Submission.NotificationStatus.PENDING

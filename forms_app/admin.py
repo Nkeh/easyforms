@@ -30,6 +30,14 @@ class FormAdmin(admin.ModelAdmin):
 
 @admin.register(Submission)
 class SubmissionAdmin(admin.ModelAdmin):
-    list_display = ("form", "status", "spam_score", "corrected", "created_at")
-    list_filter = ("status", "corrected")
+    list_display = (
+        "form",
+        "status",
+        "original_status",
+        "spam_score",
+        "corrected",
+        "corrected_at",
+        "created_at",
+    )
+    list_filter = ("status", "original_status", "corrected")
     search_fields = ("source_ip_hash", "form__name")

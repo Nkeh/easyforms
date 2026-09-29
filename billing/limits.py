@@ -1,13 +1,10 @@
-import logging
 from dataclasses import dataclass
 
 from django.db.models import Sum
 from django.utils import timezone
 
 from billing.models import UsageEvent
-from billing.plans import DEFAULT_PLAN, PLANS
-
-logger = logging.getLogger("billing")
+from billing.plans import get_plan
 
 
 @dataclass
@@ -18,16 +15,7 @@ class LimitResult:
 
 
 def _plan_config(account):
-    plan = PLANS.get(account.plan)
-    if plan is None:
-        logger.warning(
-            "unknown plan %r for account %s; falling back to %s",
-            account.plan,
-            account.id,
-            DEFAULT_PLAN,
-        )
-        plan = PLANS[DEFAULT_PLAN]
-    return plan
+    return get_plan(account)
 
 
 def _submissions_this_month(account) -> int:
