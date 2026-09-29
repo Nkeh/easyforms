@@ -19,6 +19,7 @@ def _edit(form_obj, allowed_origins="", redirect_url=""):
             "allowed_origins": allowed_origins,
             "redirect_url": redirect_url,
             "spam_action": form_obj.spam_action,
+            "retention_days": form_obj.effective_retention_days,
         },
         instance=form_obj,
     )
@@ -100,3 +101,57 @@ def test_redirect_url_rejects_non_http_scheme():
 
     assert not form.is_valid()
     assert "http" in str(form.errors["redirect_url"])
+
+
+def test_retention_days_choices_are_capped_by_plan():
+    form = FormEditForm(instance=_make_form())
+
+    values = [int(choice[0]) for choice in form.fields["retention_days"].choices]
+
+    assert values == [7, 14, 30]
+
+
+def test_retention_days_initial_defaults_to_plan_value():
+    form = FormEditForm(instance=_make_form())
+
+    assert form.initial["retention_days"] == 30
+
+
+def test_retention_days_initial_uses_form_override():
+    form = FormEditForm(instance=_make_form(retention_days=7))
+
+    assert form.initial["retention_days"] == 7
+
+
+def test_retention_days_over_plan_cap_is_rejected():
+    form_obj = _make_form()
+    form = FormEditForm(
+        data={
+            "name": form_obj.name,
+            "allowed_origins": "",
+            "redirect_url": "",
+            "spam_action": form_obj.spam_action,
+            "retention_days": "365",
+        },
+        instance=form_obj,
+    )
+
+    assert not form.is_valid()
+    assert "retention_days" in form.errors
+
+
+def test_retention_days_accepts_a_choice_within_plan_cap():
+    form_obj = _make_form()
+    form = FormEditForm(
+        data={
+            "name": form_obj.name,
+            "allowed_origins": "",
+            "redirect_url": "",
+            "spam_action": form_obj.spam_action,
+            "retention_days": "7",
+        },
+        instance=form_obj,
+    )
+
+    assert form.is_valid(), form.errors
+    assert form.cleaned_data["retention_days"] == 7

@@ -3,6 +3,7 @@ from urllib.parse import urlsplit
 from django import forms
 from django.core.exceptions import ValidationError
 
+from billing.plans import retention_choices_for
 from core.forms import TailwindStyledForm
 from forms_app.models import Form
 
@@ -46,15 +47,19 @@ class FormEditForm(TailwindStyledForm, forms.ModelForm):
         widget=forms.Textarea(attrs={"rows": 5}),
         help_text="One origin per line, e.g. https://example.com",
     )
+    retention_days = forms.TypedChoiceField(coerce=int, choices=[])
 
     class Meta:
         model = Form
-        fields = ["name", "allowed_origins", "redirect_url", "spam_action"]
+        fields = ["name", "allowed_origins", "redirect_url", "spam_action", "retention_days"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if self.instance.pk:
             self.initial["allowed_origins"] = "\n".join(self.instance.allowed_origins)
+            choices = retention_choices_for(self.instance.account)
+            self.fields["retention_days"].choices = [(days, f"{days} days") for days in choices]
+            self.initial["retention_days"] = self.instance.effective_retention_days
 
     def clean_allowed_origins(self):
         raw = self.cleaned_data.get("allowed_origins") or ""

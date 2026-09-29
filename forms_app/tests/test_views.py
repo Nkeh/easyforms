@@ -97,7 +97,12 @@ def test_token_cannot_be_changed_via_post(client):
 
     client.post(
         f"/forms/{form.pk}",
-        {"name": "Renamed", "spam_action": "flag", "token": "attacker-supplied-token"},
+        {
+            "name": "Renamed",
+            "spam_action": "flag",
+            "retention_days": form.effective_retention_days,
+            "token": "attacker-supplied-token",
+        },
     )
 
     form.refresh_from_db()
