@@ -1,0 +1,6 @@
+# Caddy auto-issues via ACME/Let's Encrypt for a public DOMAIN, or falls
+# back to its own internal CA for a non-public address (e.g. DOMAIN=localhost
+# during a local verification pass) — no branching needed here either way.
+{$DOMAIN} {
+    reverse_proxy web:8000
+}

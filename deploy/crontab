@@ -1,0 +1,7 @@
+# supercronic crontab (Day 13a). Jobs run as the container's appuser; every
+# job's stdout/stderr is captured by supercronic and written to its own
+# stdout, so `docker logs`/compose already has it — no extra redirection.
+*/5 * * * * cd /app && python manage.py send_pending_notifications
+0 3 * * *   cd /app && python manage.py purge_expired_submissions
+0 6 * * *   cd /app && python manage.py spam_report
+0 2 * * *   cd /app && python manage.py backup

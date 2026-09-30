@@ -28,6 +28,25 @@ COPY dashboard/templates/ ./dashboard/templates/
 COPY ingest/templates/ ./ingest/templates/
 RUN tailwindcss -c tailwind.config.js -i static_src/css/input.css -o static/css/app.css --minify
 
+# Scheduler binary (Day 13a). supercronic only publishes a SHA1SUM in its
+# release notes (no dedicated checksums file), so the download is verified
+# against that upstream-published SHA1 first, and the resulting SHA256 below
+# was computed once from that verified download and hardcoded — same TOFU
+# rationale as the Tailwind stage above, but starting from a real upstream
+# checksum instead of a bare download.
+FROM debian:bookworm-slim AS supercronic
+ARG SUPERCRONIC_VERSION=v0.2.49
+ARG SUPERCRONIC_SHA1=e63c11a9726b775a6a11801e81af4f3fb926aa68
+ARG SUPERCRONIC_SHA256=a53ae236602c7338aba3fbaff40bda6300eae3b9fedb8261eb06cfe3724430c1
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl ca-certificates \
+    && curl -sLo /usr/local/bin/supercronic \
+       "https://github.com/aptible/supercronic/releases/download/${SUPERCRONIC_VERSION}/supercronic-linux-amd64" \
+    && echo "${SUPERCRONIC_SHA1}  /usr/local/bin/supercronic" | sha1sum -c - \
+    && echo "${SUPERCRONIC_SHA256}  /usr/local/bin/supercronic" | sha256sum -c - \
+    && chmod +x /usr/local/bin/supercronic \
+    && rm -rf /var/lib/apt/lists/*
+
 FROM python:3.12-slim
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
@@ -41,6 +60,29 @@ ENV UV_COMPILE_BYTECODE=1 \
 
 WORKDIR /app
 
+# postgresql-client-16 (matches the `db` service's postgres:16 image — the
+# base image's own postgresql-client package tracks whatever Postgres was
+# current for its Debian release, a version-skew risk for pg_dump/pg_restore)
+# from the official PGDG apt repo, keyed off the base image's own Debian
+# codename (VERSION_CODENAME) rather than a hardcoded one — python:3.12-slim
+# tracks Debian's current stable, which has moved across the life of this
+# project. curl is also for the web healthcheck; procps for pgrep in the
+# worker/scheduler healthchecks.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl ca-certificates gnupg procps \
+    && install -d /usr/share/postgresql-common/pgdg \
+    && curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail \
+       https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+    && . /etc/os-release \
+    && echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" \
+       > /etc/apt/sources.list.d/pgdg.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends postgresql-client-16 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=supercronic /usr/local/bin/supercronic /usr/local/bin/supercronic
+COPY --chmod=644 deploy/crontab /etc/easyforms/crontab
+
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-install-project
 
@@ -48,8 +90,13 @@ COPY . .
 COPY --from=tailwind-build /app/static/css/app.css ./static/css/app.css
 RUN uv sync --frozen
 
+# collectstatic needs prod.py's WhiteNoise STORAGES config to build the
+# hashed manifest, but prod.py fail-fasts without real secrets — build.py
+# supplies build-only placeholders for exactly that (see its docstring).
+RUN DJANGO_SETTINGS_MODULE=config.settings.build python manage.py collectstatic --noinput
+
 RUN useradd --create-home --uid 1000 appuser \
-    && mkdir -p /var/lib/easyforms/artifacts /var/lib/easyforms/data \
+    && mkdir -p /var/lib/easyforms/artifacts /var/lib/easyforms/data /var/lib/easyforms/backups \
     && chown -R appuser:appuser /app /var/lib/easyforms
 USER appuser
 

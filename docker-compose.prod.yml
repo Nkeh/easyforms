@@ -1,0 +1,122 @@
+services:
+  web:
+    build: .
+    image: easyforms:latest
+    command: gunicorn config.wsgi:application --bind 0.0.0.0:8000 -c gunicorn.conf.py
+    env_file: .env
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.prod
+      WEB_CONCURRENCY: ${WEB_CONCURRENCY:-2}
+      TRUSTED_PROXY_COUNT: 1
+    volumes:
+      - artifacts:/var/lib/easyforms/artifacts
+      - backups:/var/lib/easyforms/backups
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build: .
+    image: easyforms:latest
+    command: python manage.py rqworker emails default
+    env_file: .env
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.prod
+    volumes:
+      - artifacts:/var/lib/easyforms/artifacts
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f rqworker"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  scheduler:
+    build: .
+    image: easyforms:latest
+    command: supercronic /etc/easyforms/crontab
+    env_file: .env
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.prod
+    volumes:
+      - artifacts:/var/lib/easyforms/artifacts
+      - backups:/var/lib/easyforms/backups
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep supercronic"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  caddy:
+    image: caddy:2
+    environment:
+      DOMAIN: ${DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+    # caddy:2 ships no curl/wget to hit /healthz through the proxy with, so
+    # this only proves the caddy process itself is alive; depends_on below
+    # already gates startup on web's own /healthz check.
+    healthcheck:
+      test: ["CMD", "caddy", "version"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    depends_on:
+      web:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  artifacts:
+  backups:
+  caddy_data:
+  caddy_config:

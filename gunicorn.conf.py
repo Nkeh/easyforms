@@ -1,3 +1,10 @@
+import os
+
+# ~186MB/worker (the in-process spam model + Django); default 2 fits a small
+# single instance, override via WEB_CONCURRENCY for a bigger box.
+workers = int(os.environ.get("WEB_CONCURRENCY", "2"))
+
+
 def post_worker_init(worker):
     """Warm spam.scoring's process-level scorer before this worker accepts
     requests. Import is local to this function, not module-level: gunicorn's
