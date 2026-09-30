@@ -63,6 +63,22 @@ def test_effective_retention_days_uses_form_override():
     assert form.effective_retention_days == 7
 
 
+def test_effective_retention_days_recaps_after_plan_downgrade(monkeypatch):
+    import billing.plans
+
+    pro_plan = {**billing.plans.PLANS["free"], "retention_days": 90}
+    monkeypatch.setitem(billing.plans.PLANS, "pro", pro_plan)
+    account = Account.objects.create(name="Acme Inc", plan="pro")
+    form = _make_form(account=account, retention_days=90)
+    assert form.effective_retention_days == 90
+
+    account.plan = "free"
+    account.save(update_fields=["plan"])
+    form.refresh_from_db()
+
+    assert form.effective_retention_days == 30
+
+
 def test_deleting_account_cascades_to_forms_and_submissions():
     account = Account.objects.create(name="Acme Inc")
     form = _make_form(account=account)

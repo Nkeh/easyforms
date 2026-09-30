@@ -45,7 +45,10 @@ class Form(models.Model):
 
     @property
     def effective_retention_days(self) -> int:
-        return self.retention_days or retention_days_for(self.account)
+        cap = retention_days_for(self.account)
+        if self.retention_days is None:
+            return cap
+        return min(self.retention_days, cap)
 
 
 class Submission(models.Model):
