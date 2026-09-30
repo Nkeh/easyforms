@@ -63,6 +63,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
+DATABASE_URL = env("DATABASE_URL")
 DATABASES = {
     "default": env.db("DATABASE_URL"),
 }
@@ -305,3 +306,37 @@ if SPAM_MODEL_MODE not in {"auto", "enforce", "shadow"}:
 # least SPAM_ALERT_MIN_ROWS spam-labelled rows to make the rate meaningful.
 SPAM_FP_ALERT_RATE = env.float("SPAM_FP_ALERT_RATE", default=0.02)
 SPAM_ALERT_MIN_ROWS = env.int("SPAM_ALERT_MIN_ROWS", default=50)
+
+# Day 13a — backup/restore (NFR-6, section 12). A separate credential set
+# from ARTIFACT_STORAGE/R2_* above (may point at the same R2 account, but
+# never the same access key) so a leaked model-artifact token can't also
+# read/write database backups.
+BACKUP_STORAGE = env("BACKUP_STORAGE", default="local")
+BACKUP_LOCAL_DIR = env("BACKUP_LOCAL_DIR", default="/var/lib/easyforms/backups")
+BACKUP_R2_ACCOUNT_ID = env("BACKUP_R2_ACCOUNT_ID", default="")
+BACKUP_R2_ACCESS_KEY_ID = env("BACKUP_R2_ACCESS_KEY_ID", default="")
+BACKUP_R2_SECRET_ACCESS_KEY = env("BACKUP_R2_SECRET_ACCESS_KEY", default="")
+BACKUP_BUCKET = env("BACKUP_BUCKET", default="")
+
+# Sentry (NFR-10). Only initialized when SENTRY_DSN is set — a blank DSN
+# (the dev default) is a documented no-op for the SDK, so this stays inert
+# locally without an `if DEBUG` branch. send_default_pii is always False;
+# before_send (core.sentry) scrubs anything it still attaches (CLAUDE.md
+# rule 4 — never log submission payloads).
+SENTRY_DSN = env("SENTRY_DSN", default="")
+SENTRY_TRACES_SAMPLE_RATE = env.float("SENTRY_TRACES_SAMPLE_RATE", default=0.0)
+SENTRY_ENVIRONMENT = env("SENTRY_ENVIRONMENT", default="development")
+if SENTRY_DSN:
+    import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
+
+    from core.sentry import before_send
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        environment=SENTRY_ENVIRONMENT,
+        integrations=[DjangoIntegration()],
+        send_default_pii=False,
+        before_send=before_send,
+        traces_sample_rate=SENTRY_TRACES_SAMPLE_RATE,
+    )
