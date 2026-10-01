@@ -1,6 +1,6 @@
 # easyforms
 
-Hosted form backend with ML spam filtering. See `docs/SRS.md` and `CLAUDE.md`.
+Hosted form backend with ML spam filtering. 
 
 ## Local setup
 
