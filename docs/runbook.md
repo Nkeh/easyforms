@@ -38,6 +38,23 @@ Tag images with the git SHA (`docker compose ... build --build-arg ...` or
 `docker tag easyforms:latest easyforms:<sha>`) if you want a specific
 rollback target rather than just "the previous build."
 
+## HSTS
+
+`SECURE_HSTS_SECONDS` alone is safe to set early (it just tells a browser
+"always use https for this exact host" for the given duration). Its two
+siblings default **off** and should stay off until you deliberately turn
+them on:
+
+- `SECURE_HSTS_INCLUDE_SUBDOMAINS` applies that same rule to every
+  subdomain of `DOMAIN`, including ones that don't exist yet — only enable
+  it once every current and planned subdomain actually serves HTTPS.
+- `SECURE_HSTS_PRELOAD` opts into submitting `DOMAIN` to browser vendors'
+  HSTS preload lists (shipped in Chrome/Firefox/Safari themselves). This is
+  **effectively irreversible** — removal from the list takes months and
+  only after HSTS has already been turned off cleanly. Only enable it
+  deliberately, on a domain you own outright and control every subdomain
+  of, never as a default.
+
 ## Rollback
 
 If you tagged images per-deploy: retag the previous image as `easyforms:latest`

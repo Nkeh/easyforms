@@ -2,7 +2,7 @@
 # TOFU (Tailwind doesn't publish per-binary checksums) — computed once from
 # a verified download, hardcoded here so a tampered/changed binary fails the
 # build loudly instead of being trusted silently.
-FROM debian:bookworm-slim AS tailwind-cli
+FROM debian:trixie-slim AS tailwind-cli
 ARG TAILWIND_VERSION=3.4.17
 ARG TAILWIND_SHA256=7d24f7fa191d2193b78cd5f5a42a6093e14409521908529f42d80b11fde1f1d4
 RUN apt-get update \
@@ -34,7 +34,7 @@ RUN tailwindcss -c tailwind.config.js -i static_src/css/input.css -o static/css/
 # was computed once from that verified download and hardcoded — same TOFU
 # rationale as the Tailwind stage above, but starting from a real upstream
 # checksum instead of a bare download.
-FROM debian:bookworm-slim AS supercronic
+FROM debian:trixie-slim AS supercronic
 ARG SUPERCRONIC_VERSION=v0.2.49
 ARG SUPERCRONIC_SHA1=e63c11a9726b775a6a11801e81af4f3fb926aa68
 ARG SUPERCRONIC_SHA256=a53ae236602c7338aba3fbaff40bda6300eae3b9fedb8261eb06cfe3724430c1
@@ -47,7 +47,7 @@ RUN apt-get update \
     && chmod +x /usr/local/bin/supercronic \
     && rm -rf /var/lib/apt/lists/*
 
-FROM python:3.12-slim
+FROM python:3.12-slim-trixie
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
@@ -81,6 +81,10 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=supercronic /usr/local/bin/supercronic /usr/local/bin/supercronic
+# mkdir first: COPY --chmod applies its mode to an auto-created destination
+# directory too, not just the file, which would otherwise leave
+# /etc/easyforms unreadable/untraversable by appuser (USER switches below).
+RUN mkdir -p /etc/easyforms
 COPY --chmod=644 deploy/crontab /etc/easyforms/crontab
 
 COPY pyproject.toml uv.lock ./

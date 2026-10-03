@@ -58,8 +58,10 @@ CSRF_COOKIE_HTTPONLY = True
 # Start conservative (1 day) — raise via env once DNS/redirect behavior is
 # confirmed safe; HSTS is hard to fully undo for clients that already cached it.
 SECURE_HSTS_SECONDS = env.int("SECURE_HSTS_SECONDS", default=60 * 60 * 24)
-SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-SECURE_HSTS_PRELOAD = True
+# Default off — subdomains/preload are hard-to-reverse opt-ins (see
+# docs/runbook.md), only set deliberately on a domain the operator owns.
+SECURE_HSTS_INCLUDE_SUBDOMAINS = env.bool("SECURE_HSTS_INCLUDE_SUBDOMAINS", default=False)
+SECURE_HSTS_PRELOAD = env.bool("SECURE_HSTS_PRELOAD", default=False)
 
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
