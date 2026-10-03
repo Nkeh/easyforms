@@ -1,73 +1,12 @@
-{% extends "base.html" %}
-
-{% block title %}{{ form_obj.name }} — EasyForms{% endblock %}
-
-{% block content %}
-  <h1>{{ form_obj.name }}</h1>
-
-  <dl>
-    <dt>Token</dt>
-    <dd><code>{{ form_obj.token }}</code></dd>
-
-    <dt>Endpoint URL</dt>
-    <dd><code>{{ form_obj.endpoint_url }}</code></dd>
-
-    <dt>Status</dt>
-    <dd>{{ form_obj.is_active|yesno:"Active,Inactive" }}</dd>
-  </dl>
-
-  {% if form_obj.is_active %}
-    <form method="post" action="{% url 'forms_app:deactivate' pk=form_obj.pk %}">
-      {% csrf_token %}
-      <button type="submit">Deactivate</button>
-    </form>
-  {% else %}
-    <form method="post" action="{% url 'forms_app:activate' pk=form_obj.pk %}">
-      {% csrf_token %}
-      <button type="submit">Reactivate</button>
-    </form>
-  {% endif %}
-
-  {% if not form_obj.allowed_origins %}
-    <p class="warning">
-      Any website can submit to this form. Add allowed origins to restrict it.
-    </p>
-  {% endif %}
-
-  <h2>Settings</h2>
-  <form method="post" novalidate>
-    {% csrf_token %}
-    {% for field in edit_form %}
-      <p>
-        {{ field.label_tag }}
-        {{ field }}
-        {% if field.help_text %}<br><small>{{ field.help_text }}</small>{% endif %}
-        {% if field.errors %}
-          <ul id="{{ field.auto_id }}_errors">
-            {% for error in field.errors %}<li>{{ error }}</li>{% endfor %}
-          </ul>
-        {% endif %}
-      </p>
-    {% endfor %}
-    <button type="submit">Save</button>
-  </form>
-
-  <h2>Embed snippet</h2>
-
-  <h3>Plain HTML form</h3>
-  <pre id="html-snippet">{{ html_snippet }}</pre>
-  <button type="button" onclick="easyformsCopy('html-snippet')">Copy</button>
-
-  <h3>Fetch (JSON)</h3>
-  <pre id="fetch-snippet">{{ fetch_snippet }}</pre>
-  <button type="button" onclick="easyformsCopy('fetch-snippet')">Copy</button>
-
-  <script>
-    function easyformsCopy(id) {
-      var el = document.getElementById(id);
-      if (el && navigator.clipboard) {
-        navigator.clipboard.writeText(el.innerText);
-      }
-    }
-  </script>
-{% endblock %}
+<html>
+<form action="http://localhost:8000/f/AmqoYudic6Z5N8xP5_gBdw" method="POST">
+  <input type="text" name="name" placeholder="Your name" required>
+  <input type="email" name="email" placeholder="Your email" required>
+  <textarea name="message" placeholder="Message" required></textarea>
+  <input type="text" name="_honeypot" tabindex="-1" autocomplete="off"
+         aria-hidden="true" style="position:absolute;left:-9999px;">
+  <input type="hidden" name="_ts" id="easyforms-ts">
+  <script>document.getElementById('easyforms-ts').value = Date.now();</script>
+  <button type="submit">Send</button>
+</form>
+</html>

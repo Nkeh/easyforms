@@ -12,7 +12,7 @@
   {% include "_messages.html" %}
 
   <div class="flex min-h-full flex-col md:flex-row">
-    <div class="flex items-center justify-between bg-ink px-4 py-3 md:hidden">
+    <div class="sticky top-0 z-30 flex items-center justify-between bg-ink px-4 py-3 md:hidden">
       <a href="{% url 'dashboard:home' %}" class="nav-link text-base font-semibold text-paper">Easyforms</a>
       <button type="button" id="mobile-menu-toggle" aria-expanded="false" aria-controls="mobile-drawer"
               class="rounded px-2 py-1 text-xl leading-none text-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-signal">
@@ -21,7 +21,7 @@
       </button>
     </div>
 
-    <aside class="hidden w-64 shrink-0 flex-col bg-ink px-4 py-6 md:flex">
+    <aside class="hidden w-64 shrink-0 flex-col bg-ink px-4 py-6 md:flex md:sticky md:top-0 md:min-h-screen md:self-start">
       <a href="{% url 'dashboard:home' %}" class="nav-link text-base font-semibold text-paper">Easyforms</a>
       {% include "_sidebar_nav.html" %}
     </aside>

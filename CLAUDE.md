@@ -97,6 +97,9 @@ docker compose run --rm web python manage.py makemigrations / migrate
   in the last suggested commit).
 - **Tests must include a GET of the edit page for an existing object** whenever
   a form edits stored data (catches initial-value rendering bugs).
+- **Local prod-stack tests always use a separate project name:**
+  `docker compose -f docker-compose.prod.yml -p easyforms-prodtest ...`
+  (the dev and prod files share service and volume names).
 
 ## Progress
 - [x] Day 1 — Compose skeleton, settings, custom user stub, healthz, tooling
