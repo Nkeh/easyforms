@@ -12,7 +12,7 @@ pytestmark = pytest.mark.django_db
 
 
 def test_restore_requires_key_and_database_url():
-    with pytest.raises(SystemExit):
+    with pytest.raises(CommandError, match="--key.*--database-url"):
         call_command("restore", stdout=StringIO(), stderr=StringIO())
 
 
